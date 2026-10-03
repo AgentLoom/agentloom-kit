@@ -1,0 +1,1068 @@
+{
+  "version": 1,
+  "engine_pin": "2026.10.02-stable",
+  "rules": {
+    "secret.token-shape": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "{where} contains a credential token shape ({pattern})",
+      "fix": "Remove the value. Name where the credential lives instead (e.g. `LLM_API_KEY` supplied out of band) — a committed or published token is a durable leak."
+    },
+    "secret.labeled-assignment": {
+      "severity": "warning",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "{where} assigns a value to the secret-labelled variable `{label}`",
+      "fix": "Replace the value with a placeholder such as `<supplied out of band>` unless it is certainly not a secret."
+    },
+    "issue.title.missing": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "the issue has no title",
+      "fix": "Set `title` in the draft's front matter."
+    },
+    "issue.title.too-long": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "the title is {length} characters; GitHub allows at most {max}",
+      "fix": "Shorten the title; the detail belongs in the body."
+    },
+    "issue.body.preamble-missing": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "the body does not open with a preamble paragraph before the first section",
+      "fix": "Start the body with one paragraph stating what the issue delivers and why it matters now."
+    },
+    "issue.body.section-missing": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "required section `## {section}` is missing",
+      "fix": "Add `## {section}` in the required order: {order}."
+    },
+    "issue.body.section-order": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "section `## {section}` is out of order",
+      "fix": "Order the required sections as: {order}."
+    },
+    "issue.body.section-duplicate": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "section `## {section}` appears more than once",
+      "fix": "Merge the duplicate sections into one."
+    },
+    "issue.body.section-empty": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "section `## {section}` is empty",
+      "fix": "Write the section's content or remove an optional section."
+    },
+    "issue.body.unknown-section": {
+      "severity": "warning",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`## {section}` is not a section of the issue structure",
+      "fix": "Use the required sections ({order}) and the optional ones ({optional}); use `###` for sub-headings."
+    },
+    "issue.body.engine-marker": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "the body carries the engine-owned marker `{marker}`",
+      "fix": "Remove it. The only engine marker an author may write is `SE_DEPENDS_ON_ISSUES`; the engine writes every other marker itself."
+    },
+    "issue.body.platform-marker": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "the body carries the AgentLoom card marker (`agentloom-card:`)",
+      "fix": "Remove it. The card marker belongs to issues the platform opens from a dashboard card."
+    },
+    "issue.depends-on.duplicate-marker": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "the body carries {count} `SE_DEPENDS_ON_ISSUES` markers",
+      "fix": "Merge them into one marker; the engine keeps only the last one it finds."
+    },
+    "issue.depends-on.malformed": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "the `SE_DEPENDS_ON_ISSUES` marker does not list issue numbers",
+      "fix": "Write it as `<!-- SE_DEPENDS_ON_ISSUES: 412, 415 -->` with real issue numbers."
+    },
+    "issue.depends-on.in-batch-item": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "a batch item body carries a `SE_DEPENDS_ON_ISSUES` marker",
+      "fix": "Declare the edge in the item's `depends_on`; the marker is rendered with real numbers when the issue is opened."
+    },
+    "issue.tech-skills.unknown-id": {
+      "severity": "error",
+      "pin_dependent": true,
+      "local_only": false,
+      "message": "`{id}` is not in the engine's tech-skill pool",
+      "fix": "Use only ids from `references/tech-skills.json`, or omit the section."
+    },
+    "issue.tech-skills.role-key": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`{id}` is an org-chart role key, not a tech skill",
+      "fix": "Assign roles with `se:resolve-worker:<role>` labels; `## Tech Skills` lists pool ids only."
+    },
+    "issue.tech-skills.malformed": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "a `## Tech Skills` line is not a list item naming one backticked id",
+      "fix": "Write each entry as ``- `playwright-cli` `` on its own line."
+    },
+    "issue.tech-skills.empty-section": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`## Tech Skills` is present but lists no skills",
+      "fix": "Omit the section when no pool skill applies."
+    },
+    "issue.substance.observed-failure-missing": {
+      "severity": "warning",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "a `{type}` issue has no `### Observed failure` under Background",
+      "fix": "Record what was observed and where (failing test, log line, screenshot) under `### Observed failure`."
+    },
+    "issue.substance.no-code-reference": {
+      "severity": "warning",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "a `{type}` issue cites no repository file with a line number",
+      "fix": "Ground the root cause in the code: cite the verified call chain as `path/to/file.ext:42`."
+    },
+    "issue.substance.path-not-found": {
+      "severity": "warning",
+      "pin_dependent": false,
+      "local_only": true,
+      "message": "`{path}` is cited but does not exist in this checkout",
+      "fix": "Cite a path you verified in the checkout."
+    },
+    "issue.substance.section-thin": {
+      "severity": "warning",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`## {section}` has {length} characters of content; the floor is {min}",
+      "fix": "Write the section so a resolver can act without rediscovering the context."
+    },
+    "issue.substance.acceptance-not-checklist": {
+      "severity": "warning",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`## Acceptance Criteria` has no checklist items",
+      "fix": "Write each criterion as a testable `- [ ] …` item."
+    },
+    "issue.substance.meta-narration": {
+      "severity": "warning",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "the body contains meta narration or deferred investigation (`{phrase}`)",
+      "fix": "State findings and the proposed change; do the investigation before filing."
+    },
+    "issue.labels.marker-missing": {
+      "severity": "error",
+      "pin_dependent": true,
+      "local_only": false,
+      "message": "the `{label}` label is missing",
+      "fix": "Add `{label}`; the engine selects only issues that carry it."
+    },
+    "issue.labels.type-missing": {
+      "severity": "error",
+      "pin_dependent": true,
+      "local_only": false,
+      "message": "no `{prefix}<type>` label",
+      "fix": "Add exactly one of: {values}."
+    },
+    "issue.labels.type-invalid": {
+      "severity": "error",
+      "pin_dependent": true,
+      "local_only": false,
+      "message": "`{label}` is not a valid issue type",
+      "fix": "Use one of: {values}."
+    },
+    "issue.labels.type-multiple": {
+      "severity": "error",
+      "pin_dependent": true,
+      "local_only": false,
+      "message": "more than one `{prefix}<type>` label",
+      "fix": "Keep exactly one type label."
+    },
+    "issue.labels.priority-missing": {
+      "severity": "error",
+      "pin_dependent": true,
+      "local_only": false,
+      "message": "no `{prefix}<priority>` label",
+      "fix": "Add exactly one of: {values}."
+    },
+    "issue.labels.priority-invalid": {
+      "severity": "error",
+      "pin_dependent": true,
+      "local_only": false,
+      "message": "`{label}` is not a valid priority",
+      "fix": "Use one of: {values}."
+    },
+    "issue.labels.priority-multiple": {
+      "severity": "error",
+      "pin_dependent": true,
+      "local_only": false,
+      "message": "more than one `{prefix}<priority>` label",
+      "fix": "Keep exactly one priority label."
+    },
+    "issue.labels.resolve-worker-missing": {
+      "severity": "error",
+      "pin_dependent": true,
+      "local_only": false,
+      "message": "no `{prefix}<role>` label",
+      "fix": "Add one or two resolver roles from `.seed-engine/org-chart.yml`, primary role first."
+    },
+    "issue.labels.resolve-worker-too-many": {
+      "severity": "error",
+      "pin_dependent": true,
+      "local_only": false,
+      "message": "{count} resolve-worker labels; at most {max}",
+      "fix": "Keep role assignment conservative: the primary role, plus one more only when the work truly spans both."
+    },
+    "issue.labels.unknown-role": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`{role}` is not a role key in `.seed-engine/org-chart.yml`",
+      "fix": "Use a `roles[].key` from the repository's org chart."
+    },
+    "issue.labels.lifecycle": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`{label}` is an engine-owned lifecycle label",
+      "fix": "Remove it. The engine applies lifecycle labels itself; a hand-applied one makes it skip or misread the issue."
+    },
+    "issue.labels.unexpected": {
+      "severity": "error",
+      "pin_dependent": true,
+      "local_only": false,
+      "message": "`{label}` is not part of the `{root}:` authoring scheme",
+      "fix": "Remove it. Authors write the marker, type, priority and resolve-worker labels (plus `{root}:parked` / `{root}:pinned`)."
+    },
+    "issue.labels.provenance-missing": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "the `{label}` provenance label is missing",
+      "fix": "Add `{label}` so AgentLoom can tell agent-authored work apart."
+    },
+    "issue.provenance.marker-missing": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "the hidden origin marker is missing",
+      "fix": "End the body with `{marker}`."
+    },
+    "issue.provenance.marker-malformed": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "the origin marker is malformed",
+      "fix": "Write exactly `{marker}`, or `{marker_with_user}` when connected to AgentLoom."
+    },
+    "issue.provenance.requested-by-not-uuid": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`requested-by` is not an AgentLoom user uuid",
+      "fix": "Use the uuid AgentLoom returns for your user, or drop the `requested-by` part. Never an email or login."
+    },
+    "issue.duplicate.open-issue": {
+      "severity": "warning",
+      "pin_dependent": false,
+      "local_only": true,
+      "message": "open issue #{number} looks like the same work: {title}",
+      "fix": "Read it first. Extend it with a comment, or say why this is different work."
+    },
+    "issue.duplicate.roadmap-item": {
+      "severity": "warning",
+      "pin_dependent": false,
+      "local_only": true,
+      "message": "roadmap item `{id}` looks like the same work",
+      "fix": "Read it first; if it is already planned, say so instead of filing over it."
+    },
+    "batch.empty": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "the batch has no items",
+      "fix": "Put one issue draft per file in the batch directory."
+    },
+    "batch.ref.invalid": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`{ref}` is not a valid ref",
+      "fix": "Use a short slug such as `api-schema` or `step-1` (letters, digits, `.`, `_`, `-`; at most 64)."
+    },
+    "batch.ref.duplicate": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "ref `{ref}` is used by more than one item",
+      "fix": "Give every item its own ref."
+    },
+    "batch.depends-on.invalid": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "a `depends_on` entry is neither a sibling ref nor a positive issue number",
+      "fix": "List sibling refs, or the real numbers of issues that already exist in this repository."
+    },
+    "batch.depends-on.unknown-ref": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`{ref}` depends on unknown ref `{dep}`",
+      "fix": "Name a ref defined in this batch, or the real number of an existing issue."
+    },
+    "batch.depends-on.self": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`{ref}` depends on itself",
+      "fix": "Remove the self-edge."
+    },
+    "batch.depends-on.cycle": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "circular dependency: {cycle}",
+      "fix": "Dependencies must run one way; break the cycle."
+    },
+    "roadmap.parse": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": true,
+      "message": "`{file}` does not parse: {detail}",
+      "fix": "Fix the YAML syntax."
+    },
+    "roadmap.item.removed": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "roadmap item `{id}` was removed",
+      "fix": "Restore it. Settle obsolete work through AgentLoom so the lifecycle record stays intact."
+    },
+    "roadmap.id.invalid": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`{id}` is not a lowercase slug id",
+      "fix": "Use lowercase letters and digits separated by `-` or `.` (e.g. `fleet-wide-vehicle-list`), at most {max} characters."
+    },
+    "roadmap.id.duplicate": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "id `{id}` appears {count} times in the roadmap",
+      "fix": "Ids are unique across all versions; the engine silently skips a duplicate."
+    },
+    "roadmap.field.unknown": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`{field}` is not a roadmap task field",
+      "fix": "Author only: {fields}."
+    },
+    "roadmap.version.current-missing": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`current_version` does not name a version of the roadmap",
+      "fix": "Set `current_version` to a version id before adding tasks."
+    },
+    "roadmap.version.maintenance-invalid": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`maintenance_versions` is not a list of version ids",
+      "fix": "Write `maintenance_versions: [v1.1, …]`, or `[]`; the generator reads anything else as no maintenance versions."
+    },
+    "roadmap.add.inactive-version": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "new item `{id}` is in version `{version}`, which is not active",
+      "fix": "Add new tasks under `current_version` (`{current}`) or a version listed in `maintenance_versions`; the generator never schedules items anywhere else."
+    },
+    "roadmap.add.status": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "new item `{id}` must carry `status: {status}`",
+      "fix": "Set `status: {status}`; every other status is written by the engine."
+    },
+    "roadmap.engine-field.authored": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "new item `{id}` carries the engine-owned field `{field}`",
+      "fix": "Remove it; the engine writes it."
+    },
+    "roadmap.engine-field.changed": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "the engine-owned field `{field}` changed on `{id}`",
+      "fix": "Revert it; the engine owns the lifecycle."
+    },
+    "roadmap.patch.not-planned": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`{id}` is `{status}`; only `{planned}` items may be edited",
+      "fix": "An item past planning has an issue frozen against it — file a follow-up issue or steer the run instead."
+    },
+    "roadmap.description.missing": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`{id}` has no description",
+      "fix": "Write what the task delivers and why, grounded in the repository."
+    },
+    "roadmap.description.too-long": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "the description of `{id}` is {length} characters, over its {budget}-character budget",
+      "fix": "Tighten it to at most {budget} characters; the generator expands the intent into the issue."
+    },
+    "roadmap.description.issue-section": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "the description of `{id}` carries the issue heading `{heading}`",
+      "fix": "A roadmap task is prose intent; the generator writes Scope, Implementation Notes and Acceptance Criteria."
+    },
+    "roadmap.description.checklist": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "the description of `{id}` carries checklist items",
+      "fix": "Acceptance criteria belong to the generated issue, not the roadmap task."
+    },
+    "roadmap.priority.invalid": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`{id}` has priority `{value}`",
+      "fix": "Use one of: {values}."
+    },
+    "roadmap.dependencies.invalid": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`dependencies` of `{id}` is not a list of roadmap ids",
+      "fix": "Write `dependencies: [other-id, …]`."
+    },
+    "roadmap.dependencies.unresolved": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`{id}` depends on `{dep}`, which is not a roadmap item",
+      "fix": "Name an existing item or one added in this change."
+    },
+    "roadmap.dependencies.self": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`{id}` depends on itself",
+      "fix": "Remove the self-edge."
+    },
+    "roadmap.dependencies.cycle": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "circular dependency: {cycle}",
+      "fix": "Dependencies must run one way; break the cycle."
+    },
+    "roadmap.dependencies.prose-only": {
+      "severity": "warning",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "the description of `{id}` names roadmap item `{dep}` but `dependencies` does not list it",
+      "fix": "If the task must wait for `{dep}`, add it to `dependencies`; the generator reads only the structured field."
+    },
+    "roadmap.parent-id.unresolved": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`parent_id` of `{id}` names `{parent}`, which is not a roadmap item",
+      "fix": "Name an existing item or one added in this change."
+    },
+    "roadmap.tech-skills.invalid": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`tech_skills` of `{id}` is not a list of pool ids",
+      "fix": "Write `tech_skills: [id, …]` or `[]`."
+    },
+    "roadmap.tech-skills.unknown-id": {
+      "severity": "error",
+      "pin_dependent": true,
+      "local_only": false,
+      "message": "`{skill}` on `{id}` is not in the engine's tech-skill pool",
+      "fix": "Use only ids from `references/tech-skills.json`; `[]` is the default."
+    },
+    "roadmap.tech-skills.role-key": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`{skill}` on `{id}` is an org-chart role key, not a tech skill",
+      "fix": "Role skills are silently invalid as `tech_skills`; use pool ids only."
+    },
+    "roadmap.scheduling.invalid": {
+      "severity": "error",
+      "pin_dependent": true,
+      "local_only": false,
+      "message": "`scheduling` of `{id}` is `{value}`",
+      "fix": "Use `pinned` or `parked`; remove the key to clear it (an explicit null is malformed)."
+    },
+    "roadmap.pinned.retired": {
+      "severity": "error",
+      "pin_dependent": true,
+      "local_only": false,
+      "message": "`{id}` carries the retired `pinned` key",
+      "fix": "Use `scheduling: pinned` instead."
+    },
+    "roadmap.tags.invalid": {
+      "severity": "error",
+      "pin_dependent": true,
+      "local_only": false,
+      "message": "`tags` of `{id}` is not a list of strings",
+      "fix": "Run `roadmap-tag.py` to stamp the provenance tags."
+    },
+    "roadmap.tags.provenance-missing": {
+      "severity": "error",
+      "pin_dependent": true,
+      "local_only": false,
+      "message": "new item `{id}` lacks the `{tag}` tag",
+      "fix": "Run `roadmap-tag.py` on the new ids."
+    },
+    "roadmap.tags.not-provenance": {
+      "severity": "error",
+      "pin_dependent": true,
+      "local_only": false,
+      "message": "`{tag}` on `{id}` is not a provenance tag",
+      "fix": "Authors write only `{user_generated}` and `{requested_by}<uuid>`; other tags are operator-owned."
+    },
+    "roadmap.tags.requested-by-not-uuid": {
+      "severity": "error",
+      "pin_dependent": true,
+      "local_only": false,
+      "message": "`{tag}` on `{id}` does not carry a user uuid",
+      "fix": "Use the AgentLoom user uuid, or omit the tag offline. Never an email or login: the roadmap is committed history."
+    },
+    "roadmap.tags.changed": {
+      "severity": "error",
+      "pin_dependent": true,
+      "local_only": false,
+      "message": "the tags of existing item `{id}` changed",
+      "fix": "Revert them; tags on existing items are operator-owned."
+    },
+    "roadmap.docs.invalid": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`docs` of `{id}` is not a list of repository paths",
+      "fix": "Write `docs: [path/to/doc.md, …]`."
+    },
+    "roadmap.docs.not-found": {
+      "severity": "warning",
+      "pin_dependent": false,
+      "local_only": true,
+      "message": "`{path}` in `docs` of `{id}` does not exist in this checkout",
+      "fix": "Point at a document that exists."
+    },
+    "roadmap.manual-blocker.invalid": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "manual blocker {index} of `{id}`: {detail}",
+      "fix": "Write `{ id: BLK-…, title, kind: operator_action | upstream_request | other, doc }` (plus `recipient` for an upstream_request)."
+    },
+    "blocker.registry.parse": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": true,
+      "message": "`{file}` does not parse: {detail}",
+      "fix": "Fix the YAML syntax."
+    },
+    "blocker.not-found": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`{id}` is not in the blocker registry",
+      "fix": "Check the id against `.seed-engine/blockers-registry.yml`."
+    },
+    "blocker.new-entry": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`{id}` is not in the base registry",
+      "fix": "A completion edits an existing entry; new planning blockers are authored with their roadmap task."
+    },
+    "blocker.resolver-origin": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`{id}` is a resolver blocker",
+      "fix": "Resolver blockers are answered on the run (Record answers & resume), never by editing the registry."
+    },
+    "blocker.unchanged": {
+      "severity": "warning",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`{id}` is unchanged",
+      "fix": "Nothing to validate; record the resolution with `blocker-complete.py`."
+    },
+    "blocker.status.invalid": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`{status}` is not a valid status for a `{kind}` blocker",
+      "fix": "Use one of: {values}."
+    },
+    "blocker.status.backward": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`{id}` cannot move from `{from}` to `{to}`",
+      "fix": "Statuses only move forward: {values}."
+    },
+    "blocker.status.unchanged": {
+      "severity": "warning",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`{id}` stays `{status}`: this edits the recorded entry rather than completing it",
+      "fix": "Keep it to a correction of the resolution text. A completion moves the status forward with `blocker-complete.py`."
+    },
+    "blocker.resolution.required": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "status `{status}` requires a `resolution_summary`",
+      "fix": "Summarise what was decided or completed, without secret values."
+    },
+    "blocker.resolution.secret-assignment": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`resolution_summary` assigns a value to the secret-labelled variable `{label}`",
+      "fix": "Replace the value with where it lives, or confirm it is not a secret by passing `--ack {label}`."
+    },
+    "blocker.resolved.invalid": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`resolved` of `{id}` is not an ISO date",
+      "fix": "Write the resolution date as `YYYY-MM-DD` (UTC)."
+    },
+    "blocker.field.changed": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`{field}` changed on `{id}`",
+      "fix": "A completion writes only {fields}; revert the other edits."
+    },
+    "blocker.registry.other-entries": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "entries other than `{id}` changed: {ids}",
+      "fix": "Complete one blocker per edit; revert the other entries."
+    }
+  },
+  "labels": {
+    "marker": "se",
+    "root": "se",
+    "type_prefix": "se:type:",
+    "priority_prefix": "se:priority:",
+    "resolve_worker_prefix": "se:resolve-worker:",
+    "operator": [
+      "se:parked",
+      "se:pinned"
+    ],
+    "lifecycle_prefixes": [
+      "se:resolve-status:",
+      "se:review-worker:",
+      "se:review-status:",
+      "se:roadmap:"
+    ],
+    "lifecycle_exact": [
+      "se:open-pr",
+      "se:blocked-manual",
+      "se:needs-attention",
+      "se:already-resolved",
+      "se:verified",
+      "se:claude-md-refresh"
+    ],
+    "max_resolve_workers": 2,
+    "provenance": "agentloom:user-generated"
+  },
+  "issue": {
+    "types": [
+      "security",
+      "bugfix",
+      "feature",
+      "refactor",
+      "dependency",
+      "docs",
+      "chore",
+      "test",
+      "other"
+    ],
+    "priorities": [
+      "low",
+      "medium",
+      "high"
+    ],
+    "required_sections": [
+      "Goal",
+      "Background",
+      "Scope",
+      "Implementation Notes",
+      "Acceptance Criteria"
+    ],
+    "optional_sections": [
+      "Risks",
+      "Open Questions",
+      "Out of Scope",
+      "References",
+      "Tech Skills"
+    ],
+    "tech_skills_section": "Tech Skills",
+    "section_floors": {
+      "Goal": 40,
+      "Background": 150,
+      "Scope": 60,
+      "Implementation Notes": 200,
+      "Acceptance Criteria": 40
+    },
+    "title_max": 256,
+    "evidence_types": [
+      "bugfix",
+      "security"
+    ],
+    "observed_failure_heading": "Observed failure",
+    "meta_narration_phrases": [
+      "investigate whether",
+      "look into whether",
+      "as an ai",
+      "let me",
+      "i will now"
+    ],
+    "depends_on_marker": "SE_DEPENDS_ON_ISSUES",
+    "origin": {
+      "key": "agentloom-origin",
+      "source": "ide",
+      "requested_by_key": "requested-by",
+      "marker": "<!-- agentloom-origin: ide -->",
+      "marker_with_user": "<!-- agentloom-origin: ide; requested-by: <uuid> -->"
+    }
+  },
+  "roadmap": {
+    "priorities": [
+      "low",
+      "medium",
+      "high"
+    ],
+    "scheduling_values": [
+      "pinned",
+      "parked"
+    ],
+    "planned_status": "planned",
+    "authored_fields": [
+      "id",
+      "description",
+      "priority",
+      "status",
+      "dependencies",
+      "parent_id",
+      "scheduling",
+      "tags",
+      "docs",
+      "manual_blockers",
+      "tech_skills"
+    ],
+    "engine_owned_fields": [
+      "status",
+      "created_by",
+      "created_at",
+      "triaged",
+      "sprint_ref",
+      "issue_ref",
+      "planned_at",
+      "completed_at",
+      "deferred_from",
+      "source_repo"
+    ],
+    "disposition_fields": [
+      "scheduling",
+      "pinned"
+    ],
+    "retired_fields": [
+      "pinned"
+    ],
+    "forbidden_description_headings": [
+      "Goal",
+      "Background",
+      "Scope",
+      "Implementation Notes",
+      "Acceptance Criteria"
+    ],
+    "description_budget": 16384,
+    "description_max": 21300,
+    "id_max": 100,
+    "provenance": {
+      "user_generated": "user-generated",
+      "requested_by_prefix": "requested-by:"
+    },
+    "manual_blocker": {
+      "kinds": [
+        "operator_action",
+        "upstream_request",
+        "other"
+      ],
+      "title_max": 500,
+      "recipient_max": 500,
+      "doc_max": 500,
+      "id_max": 100
+    }
+  },
+  "blocker": {
+    "status_order": {
+      "upstream_request": [
+        "pending",
+        "raised",
+        "in_discussion",
+        "agreed",
+        "rejected",
+        "completed"
+      ],
+      "simple": [
+        "pending",
+        "completed"
+      ]
+    },
+    "resolution_required": [
+      "agreed",
+      "rejected",
+      "completed"
+    ],
+    "completion_fields": [
+      "status",
+      "resolved",
+      "resolution_summary"
+    ],
+    "status_aliases": {
+      "resolved": "completed"
+    },
+    "resolver_id_prefix": "BLK-RES-",
+    "registry_path": ".seed-engine/blockers-registry.yml"
+  },
+  "patterns": {
+    "roadmapId": {
+      "source": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$",
+      "flags": ""
+    },
+    "batchRef": {
+      "source": "^[a-z0-9][a-z0-9._-]*$",
+      "flags": "i"
+    },
+    "uuid": {
+      "source": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "flags": "i"
+    },
+    "fence": {
+      "source": "^\\s{0,3}(`{3,}|~{3,})",
+      "flags": ""
+    },
+    "sectionHeading": {
+      "source": "^##\\s+(.*\\S)\\s*$",
+      "flags": ""
+    },
+    "anyHeading": {
+      "source": "^#{1,6}\\s+(.*\\S)\\s*$",
+      "flags": ""
+    },
+    "htmlComment": {
+      "source": "<!--[\\s\\S]*?-->",
+      "flags": ""
+    },
+    "engineMarker": {
+      "source": "<!--\\s*((?:SE|SEED_ENGINE)_[A-Z0-9_]+)\\b",
+      "flags": ""
+    },
+    "dependsOnMarker": {
+      "source": "<!--\\s*SE_DEPENDS_ON_ISSUES:([^>]*?)-->",
+      "flags": ""
+    },
+    "dependsOnEntry": {
+      "source": "^#?[1-9][0-9]*$",
+      "flags": ""
+    },
+    "platformMarker": {
+      "source": "<!--\\s*agentloom-card:",
+      "flags": ""
+    },
+    "originMarker": {
+      "source": "<!--\\s*agentloom-origin:([^>]*?)-->",
+      "flags": ""
+    },
+    "techSkillItem": {
+      "source": "^[-*]\\s+`([^`]+)`\\s*$",
+      "flags": ""
+    },
+    "observedFailure": {
+      "source": "^###\\s+observed failure\\b",
+      "flags": "im"
+    },
+    "codeReference": {
+      "source": "([A-Za-z0-9_][A-Za-z0-9_./-]*\\.[A-Za-z0-9]+):([0-9]+)",
+      "flags": ""
+    },
+    "checklistItem": {
+      "source": "^\\s*[-*]\\s+\\[[ xX]\\]",
+      "flags": "m"
+    },
+    "backtickedId": {
+      "source": "`([a-z0-9]+(?:[.-][a-z0-9]+)*)`",
+      "flags": ""
+    },
+    "blockerId": {
+      "source": "^BLK-[A-Z0-9-]+$",
+      "flags": ""
+    },
+    "isoDate": {
+      "source": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+      "flags": ""
+    }
+  },
+  "secrets": {
+    "token_patterns": [
+      {
+        "id": "github_token",
+        "source": "\\bgh[pousr]_[A-Za-z0-9]{20,255}\\b",
+        "flags": ""
+      },
+      {
+        "id": "github_pat",
+        "source": "\\bgithub_pat_[A-Za-z0-9_]{20,255}\\b",
+        "flags": ""
+      },
+      {
+        "id": "anthropic_api_key",
+        "source": "\\bsk-ant-[A-Za-z0-9_-]{20,255}\\b",
+        "flags": ""
+      },
+      {
+        "id": "openai_api_key",
+        "source": "\\bsk-[A-Za-z0-9]{32,255}\\b",
+        "flags": ""
+      },
+      {
+        "id": "aws_access_key_id",
+        "source": "\\bAKIA[0-9A-Z]{16}\\b",
+        "flags": ""
+      },
+      {
+        "id": "google_api_key",
+        "source": "\\bAIza[0-9A-Za-z_-]{35}\\b",
+        "flags": ""
+      },
+      {
+        "id": "slack_token",
+        "source": "\\bxox[baprs]-[A-Za-z0-9-]{10,255}\\b",
+        "flags": ""
+      },
+      {
+        "id": "bearer_token",
+        "source": "\\bBearer\\s+[A-Za-z0-9._~+/-]{20,}=*\\b",
+        "flags": ""
+      },
+      {
+        "id": "url_userinfo_service_token",
+        "source": "\\b(x-access-token|oauth2):[^@\\s/]+@",
+        "flags": ""
+      },
+      {
+        "id": "url_userinfo_basic_auth",
+        "source": ":\\/\\/[^:@\\s/]+:[^@\\s/]+@",
+        "flags": ""
+      }
+    ],
+    "labeled_assignment": {
+      "source": "\\b([A-Z][A-Z0-9_]*(?:KEY|TOKEN|SECRET|PASSWD|PASSWORD|CREDENTIAL)[A-Z0-9_]*)\\s*[=:]\\s*(<[^>\\n]*>|\"[^\"\\n]*\"|'[^'\\n]*'|`[^`\\n]*`|\\S+)",
+      "flags": ""
+    },
+    "placeholder_exemptions": [
+      {
+        "id": "angle_bracketed",
+        "source": "^<[^>]*>$",
+        "flags": ""
+      },
+      {
+        "id": "variable_reference",
+        "source": "^\\$\\{?[A-Za-z_][A-Za-z0-9_]*\\}?$",
+        "flags": ""
+      },
+      {
+        "id": "asterisk_mask",
+        "source": "\\*{2,}",
+        "flags": ""
+      },
+      {
+        "id": "redacted_sentinel",
+        "source": "^(?:«redacted»|<redacted>|\\[redacted\\]|redacted)$",
+        "flags": "i"
+      },
+      {
+        "id": "empty_or_blank",
+        "source": "^\\s*$",
+        "flags": ""
+      },
+      {
+        "id": "empty_quoted",
+        "source": "^(?:\"\"|'')$",
+        "flags": ""
+      }
+    ]
+  },
+  "tech_skills": {
+    "engine_pin": "2026.10.02-stable",
+    "ids": [
+      "db-migrations",
+      "expo-building-native-ui",
+      "expo-deployment",
+      "expo-module",
+      "frontend-design",
+      "native-data-fetching",
+      "playwright-cli",
+      "upgrading-expo"
+    ]
+  }
+}

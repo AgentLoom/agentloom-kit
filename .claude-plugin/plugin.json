@@ -1,0 +1,23 @@
+{
+  "name": "agentloom",
+  "version": "2026.10.2",
+  "description": "Author AgentLoom issues, issue batches, roadmap tasks and blocker resolutions from your own agent, validated before you push.",
+  "author": {
+    "name": "AgentLoom",
+    "url": "https://agent-loom.com"
+  },
+  "homepage": "https://agent-loom.com",
+  "repository": "https://github.com/AgentLoom/agentloom-kit",
+  "keywords": [
+    "agentloom",
+    "seed-engine",
+    "issues",
+    "roadmap"
+  ],
+  "mcpServers": {
+    "agentloom": {
+      "type": "http",
+      "url": "https://api.agent-loom.com/api/mcp"
+    }
+  }
+}

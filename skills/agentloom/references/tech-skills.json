@@ -1,0 +1,47 @@
+{
+  "built_for_pin": "2026.10.02-stable",
+  "ids": [
+    "db-migrations",
+    "expo-building-native-ui",
+    "expo-deployment",
+    "expo-module",
+    "frontend-design",
+    "native-data-fetching",
+    "playwright-cli",
+    "upgrading-expo"
+  ],
+  "skills": [
+    {
+      "id": "db-migrations",
+      "description": "Schema-migration discipline for repositories that own a persistent database schema: committed migrations with the repo's chosen tool, expand/contract safety under forward-only apply with code-only rollback, schema-drift guards in CI (model-snapshot parity, apply-from-zero), destructive-operation justification, and seed-data separation. Assign to tasks that add, change, or remove tables, columns, indexes, constraints, or enums — or that introduce the repo's first migration tooling."
+    },
+    {
+      "id": "expo-building-native-ui",
+      "description": "Complete guide for building beautiful apps with Expo Router. Covers fundamentals, styling, components, navigation, animations, patterns, and native tabs."
+    },
+    {
+      "id": "expo-deployment",
+      "description": "Deploying Expo apps to iOS App Store, Android Play Store, web hosting, and API routes."
+    },
+    {
+      "id": "expo-module",
+      "description": "Guide for writing Expo native modules and views using the Expo Modules API (Swift, Kotlin, TypeScript). Covers module definition DSL, native views, shared objects, config plugins, lifecycle hooks, autolinking, and type system. Use when building or modifying native modules for Expo."
+    },
+    {
+      "id": "frontend-design",
+      "description": "End-to-end visual design workflow for product UI: product research and audit, design thesis, screen maps (personas, screen tree, inventory, flows), a single-source design token layer with codegen, a component library, screens with full state coverage, Playwright-based visual verification, and living in-repo design docs plus a self-contained HTML showcase. Use for any frontend task that changes how the product looks: greenfield design systems, full redesigns, new screens or components, token/styling changes, or visual review."
+    },
+    {
+      "id": "native-data-fetching",
+      "description": "Use when implementing or debugging ANY network request, API call, or data fetching. Covers fetch API, React Query, SWR, error handling, caching, offline support, and Expo Router data loaders (useLoaderData)."
+    },
+    {
+      "id": "playwright-cli",
+      "description": "browser automation via CLI commands (snapshots, clicks, fills, network inspection, DevTools) — required for any issue involving UI verification, browser interaction, or Playwright test authoring"
+    },
+    {
+      "id": "upgrading-expo",
+      "description": "Guidelines for upgrading Expo SDK versions and fixing dependency issues."
+    }
+  ]
+}

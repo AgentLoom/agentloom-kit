@@ -1,0 +1,15 @@
+{
+  "name": "agentloom-kit",
+  "owner": {
+    "name": "AgentLoom",
+    "url": "https://agent-loom.com"
+  },
+  "plugins": [
+    {
+      "name": "agentloom",
+      "source": "./",
+      "description": "Author AgentLoom issues, issue batches, roadmap tasks and blocker resolutions from your own agent, validated before you push.",
+      "version": "2026.10.2"
+    }
+  ]
+}

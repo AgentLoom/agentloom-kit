@@ -194,7 +194,8 @@ user. A provisional run with no errors may still be filed; one with any error
 may not. Connected, `--context` supplies the platform's `rules_fingerprint`
 (a context without one is provisional); offline, pass `--rules-fingerprint <fp>`
 when the user knows it. If it differs from this kit's, the kit is out of date
-and nothing may be filed until it is updated.
+and nothing may be filed until it is updated; give the user the update steps
+the validator prints.
 
 `0` pass · `1` errors · `2` usage or environment problem · `3` provisional.
 

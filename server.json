@@ -3,7 +3,7 @@
   "name": "io.github.AgentLoom/agentloom",
   "title": "AgentLoom",
   "description": "Your AgentLoom org from your agent: runs, blockers, approvals, issues, roadmap.",
-  "version": "2026.10.4.3",
+  "version": "2026.10.5.1",
   "websiteUrl": "https://agent-loom.com",
   "repository": {
     "url": "https://github.com/AgentLoom/agentloom-kit",

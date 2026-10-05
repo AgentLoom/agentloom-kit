@@ -113,6 +113,12 @@ POOL: list[str] = list(RULES["tech_skills"]["ids"])
 # document (`authoringRulesFingerprint` in @agentloom/shared). The kit carries
 # no engine pin — a pin bump that changes no rule leaves the kit unchanged.
 BUILT_FOR_RULES_FINGERPRINT: str = RULES["rules_fingerprint"]
+# How to update, named wherever the kit reports itself out of date.
+UPDATE_HINT = (
+    "Claude Code: `claude plugin marketplace update agentloom-kit`, then "
+    "`claude plugin update agentloom@agentloom-kit` and a new session; "
+    "other clients: the kit README's Update section"
+)
 
 
 # ── Findings ────────────────────────────────────────────────────────────────
@@ -1559,7 +1565,7 @@ def report(
         emit(f"{tag} {f['rule']} at {f['path']}: {f['message']}\n    fix: {f['fix']}")
     if state == "mismatch":
         emit(
-            f"PROVISIONAL: kit built for rules `{BUILT_FOR_RULES_FINGERPRINT}`, platform serves rules `{fingerprint.strip() if fingerprint else ''}`: update the kit. Pin-dependent checks (tech-skill pool, scheduling/tags grammar, label root) were not run."
+            f"PROVISIONAL: kit built for rules `{BUILT_FOR_RULES_FINGERPRINT}`, platform serves rules `{fingerprint.strip() if fingerprint else ''}`: update the kit ({UPDATE_HINT}). Pin-dependent checks (tech-skill pool, scheduling/tags grammar, label root) were not run."
         )
     elif state == "unknown":
         emit(

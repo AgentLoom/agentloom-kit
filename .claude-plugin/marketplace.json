@@ -9,7 +9,7 @@
       "name": "agentloom",
       "source": "./",
       "description": "Author AgentLoom issues, issue batches, roadmap tasks and blocker resolutions from your own agent, validated before you push.",
-      "version": "2026.10.4.3"
+      "version": "2026.10.5.1"
     }
   ]
 }

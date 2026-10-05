@@ -1,6 +1,6 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "agentloom",
-  "version": "2026.10.4.3",
+  "version": "2026.10.5.1",
   "description": "Author AgentLoom issues, issue batches, roadmap tasks and blocker resolutions from your own agent, validated before you push."
 }

@@ -80,4 +80,4 @@ ref in the order with the numbers you have.
 
 ---
 
-*Generated from AgentLoom's authoring rules for engine pin `2026.10.02-stable`.*
+*Generated from AgentLoom's authoring rules `6d0c4044f0e2`.*

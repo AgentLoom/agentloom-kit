@@ -3,7 +3,7 @@ name: agentloom
 description: File work for AgentLoom correctly from the IDE — resolver-ready GitHub issues, dependency-ordered issue batches, roadmap tasks in .seed-engine/roadmap.yml, and manual-blocker resolutions — checked by a deterministic validator before anything is filed or pushed. Use when the user asks to file, queue, plan or hand work to AgentLoom or Seed-Engine, to put something on the roadmap, to pin or park a roadmap task, to complete a BLK-* blocker, or to check a hand-written issue or roadmap edit before pushing.
 compatibility: Needs Python 3.10+ with PyYAML and ruamel.yaml, git, and the GitHub CLI (gh) for filing issues. Works offline with no AgentLoom credentials; the optional AgentLoom MCP server adds the live authoring context and your user id.
 metadata:
-  built_for_pin: "2026.10.02-stable"
+  built_for_rules_fingerprint: "6d0c4044f0e23d57d9a4bb2f7f0ebaacc8bfdaaeee7486fe5f467589eb9227da"
 ---
 
 # AgentLoom
@@ -30,7 +30,7 @@ client can add `https://api.agent-loom.com/api/mcp`), start every authoring task
    `/tmp/agentloom-context.json`.
 3. Pass `--context /tmp/agentloom-context.json` to every `validate.py` and
    `roadmap-tag.py` run below. The validator then checks against the
-   platform's pin and the repository's live resolver roles, and the tag script
+   platform's authoring rules and the repository's live resolver roles, and the tag script
    stamps your user id. Use the context's `provenance.issue_origin_marker` as
    an issue's origin line.
 
@@ -60,10 +60,10 @@ Every write:
 
 | The user wants | Tool |
 |---|---|
-| File without `gh` or a checkout | `open_issue`, or `open_issue_batch` for 2–10 linked issues — the platform checks, labels and stamps them |
+| File without `gh` or a checkout | `open_issue`, or `open_issue_batch` for 2–10 linked issues — the platform checks, labels and stamps them; `scheduling: "parked"` files one that must not start yet (`references/labels.md`) |
 | "Run it now" | `dispatch_run` on the issue |
 | A stopped run going again | `get_run_failure`, then `steer_run` (read `references/steer-guidance.md` first) or `resume_run`; `reset_cap: true` only when the run's cap is exhausted — it is limited per day |
-| A roadmap change the platform commits | `revise_roadmap` — its preview is the exact diff; `git pull` after |
+| A roadmap change the platform commits | `revise_roadmap` — its preview is the exact diff; `git pull` after; a task already delivered or no longer wanted is settled, after you verify it (`references/roadmap-task.md`) |
 | A manual blocker recorded | `complete_blocker` (instead of `blocker-complete.py`) |
 | A resolver's questions answered | `respond_to_blocker` — its preview returns the questions and the revision to answer |
 | A recommendation accepted | `get_recommendation`, then `accept_recommendation` |
@@ -103,12 +103,13 @@ planned or open, report it and stop; never file over it.
    (plus `--context …` when connected, here and in every command below)
 4. Fix every error. Treat warnings as defects unless the user decides otherwise.
    The body file and the `gh` command are only produced when the run has no
-   error at all and no pin mismatch.
+   error at all and no rules mismatch.
 5. File with the printed command:
    `gh issue create --title … --body-file draft.body.md --label …`
 
 To have it built right away, the user presses **Start run** on the issue in the
-AgentLoom dashboard; otherwise the backlog picks it up.
+AgentLoom dashboard; otherwise the backlog picks it up — unless you filed it
+parked, which `references/labels.md` says when to do.
 
 ## File an issue batch
 
@@ -146,7 +147,8 @@ See `references/roadmap-task.md` and, for several linked tasks,
 
 **Pin or park an existing task:** set `scheduling: pinned` (the next backlog
 generation prioritises it) or `scheduling: parked` (the generator skips it
-until unparked); remove the key to clear it. Validate, commit, push.
+until unparked); remove the key to clear it. Validate, commit, push. An issue
+is pinned or parked with labels instead (`references/labels.md`).
 
 ## Complete a manual blocker
 
@@ -169,10 +171,10 @@ or `validate.py blocker <BLK-id>`. Add `--json` for machine-readable findings
 
 ## Never
 
-- Apply an engine lifecycle label (`se:resolve-status:*`, `se:review-*`,
+- Apply or remove a label the engine sets (`se:resolve-status:*`, `se:review-*`,
   `se:open-pr`, `se:blocked-manual`, …) or name a reviewer. The engine
   applies them; a hand-applied one makes it skip the issue.
-- Write engine markers other than `SE_DEPENDS_ON_ISSUES`, or edit an issue's body
+- Write engine markers other than `SE_DEPENDS_ON_ISSUES`, or edit an issue's body or labels
   after a run started on it — file a follow-up issue instead.
 - Write roadmap `tags` other than through `roadmap-tag.py`, or put an email or
   login anywhere in the roadmap.
@@ -181,14 +183,16 @@ or `validate.py blocker <BLK-id>`. Add `--json` for machine-readable findings
   is no longer `planned`.
 - Commit a credential. Name where a secret lives, never its value.
 
-## Exit codes and the engine pin
+## Exit codes and the platform's rules
 
-This kit was built for engine pin `2026.10.02-stable` (`references/tech-skills.json`).
-Some checks depend on the pin: the tech-skill pool, the `scheduling` / `tags`
-grammar, the label root. Without `--pin`, those results are **provisional**
-and the scripts exit `3`. That is not a pass — say so to the user. A
-provisional run with no errors may still be filed; one with any error may not.
-Connected, `--context` supplies the platform's pin; offline, pass `--pin <pin>`
+This kit was built from AgentLoom's authoring rules `6d0c4044f0e23d57d9a4bb2f7f0ebaacc8bfdaaeee7486fe5f467589eb9227da`
+(`scripts/authoring-rules.json`, `rules_fingerprint`). Some checks depend on
+the engine the platform runs: the tech-skill pool, the `scheduling` / `tags`
+grammar, the label root. Unconfirmed against the platform, those results are
+**provisional** and the scripts exit `3`. That is not a pass — say so to the
+user. A provisional run with no errors may still be filed; one with any error
+may not. Connected, `--context` supplies the platform's `rules_fingerprint`
+(a context without one is provisional); offline, pass `--rules-fingerprint <fp>`
 when the user knows it. If it differs from this kit's, the kit is out of date
 and nothing may be filed until it is updated.
 
@@ -203,4 +207,4 @@ and nothing may be filed until it is updated.
 - `references/labels.md` — the label scheme
 - `references/blockers.md` — manual blockers, statuses, resolutions
 - `references/steer-guidance.md` — writing guidance for `steer_run`
-- `references/tech-skills.json` — the tech-skill pool for `2026.10.02-stable`
+- `references/tech-skills.json` — the engine's tech-skill pool

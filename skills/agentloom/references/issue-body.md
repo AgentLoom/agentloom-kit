@@ -19,10 +19,14 @@ act on it without rediscovering, re-reasoning, or hitting design gaps.
 - `## Risks`
 - `## Open Questions`
 - `## Out of Scope`
+- `## Manual Verification` — checks that genuinely need an operator, a deployed
+  environment or more than one push; never acceptance criteria.
 
 A `## References` section is welcome only when it points at real repository
-documents the resolver should read, as relative Markdown links. `## Tech Skills`
-is described below.
+documents the resolver should read, as relative Markdown links. Each is loaded
+in full into the resolver's context: link only the few design documents the
+change depends on — never source files, never a path containing `)`.
+`## Tech Skills` is described below.
 
 ## Content guidance
 
@@ -33,7 +37,12 @@ is described below.
 - **Implementation Notes** — likely technical approach, constraints, sequencing,
   integration concerns. For a bug, include the root cause and the file:line you
   located.
-- **Acceptance Criteria** — a testable/reviewable checklist.
+- **Acceptance Criteria** — a testable/reviewable checklist, every item
+  satisfiable by **one resolver round**: one commit and one push, judged on the
+  final head, without an operator act, a deployed environment or a multi-push
+  CI sequence. Write a proof that the change can fail as a test, or give an
+  alternative the resolver can meet ("or an equivalent documented check"); a
+  check that genuinely needs an operator goes in `## Manual Verification`.
 - Never instruct the resolver to hand-author a `BLK-*` guide anchor, add a
   blocker-registry row, or otherwise edit blocker planes as an acceptance
   criterion. Planning blockers belong in roadmap `manual_blockers`; a resolver
@@ -53,6 +62,8 @@ is described below.
 - Detailed and useful to both humans and a future Claude Code resolver run.
 - Explicit about the goal, constraints, likely implementation space, and
   acceptance criteria.
+- Names the alternatives you rejected and why, so the resolver does not
+  reopen them.
 - Free of meta narration about your own process.
 - Implementation-ready, not a thin summary — as if authored by a strong human
   contributor.
@@ -62,8 +73,10 @@ is described below.
 - Ground every claim in this checkout. Cite the verified call chain as
   `path/to/file.ext:line`; the validator warns when a cited path does not exist.
 - **Forensics first, then the fix.** Background states what was observed and
-  where; Implementation Notes carry the proposed change concretely — a draft
-  diff where feasible — plus the callers in scope, sequencing and risks.
+  where, with the evidence itself — quoted log lines, the error, what the run
+  or screen showed — since the resolver may not reach anything outside this
+  repository; Implementation Notes carry the proposed change concretely — a
+  draft diff where feasible — plus the callers in scope, sequencing and risks.
 - For a `bugfix` or `security` issue, Background opens with a
   `### Observed failure` subsection (failing test, log line, screenshot, the
   exact reproduction) and the root cause names the code at fault and the
@@ -184,4 +197,4 @@ follow-up issue that references this one by number.
 
 ---
 
-*Generated from AgentLoom's authoring rules for engine pin `2026.10.02-stable`.*
+*Generated from AgentLoom's authoring rules `6d0c4044f0e2`.*

@@ -7,19 +7,21 @@
     validate.py blocker <BLK-id> [--base REF] [--ack LABEL ...]
 
 Common options: --repo-root PATH (default: the current directory),
---pin TAG (the platform's engine pin, when known), --context FILE (the saved
-result of the AgentLoom MCP tool `get_authoring_context`: the platform's pin
-and the repository's resolver roles, live), --json.
+--rules-fingerprint FP (the platform's authoring rules fingerprint, when known),
+--context FILE (the saved result of the AgentLoom MCP tool
+`get_authoring_context`: the platform's rules fingerprint and the repository's
+resolver roles, live), --json.
 
 Exit codes: 0 pass; 1 errors; 2 usage or environment problem; 3 provisional —
-the pin-dependent checks could not be confirmed against the platform's pin
-(offline without --pin or --context, or the platform's pin differs from the pin
-this kit was built for).
+the pin-dependent checks could not be confirmed against the platform's rules
+(offline without --rules-fingerprint or --context, a context from a server that
+serves no rules fingerprint, or the platform's rules differ from the rules this
+kit was built from).
 A provisional run is never a pass.
 
 Filing output — `--emit-body`, the batch opening order, `batch --open` — is
 produced only when the run has no error of any kind (a provisional one
-included) and no pin mismatch; for a batch, the WHOLE batch must be clean.
+included) and no rules mismatch; for a batch, the WHOLE batch must be clean.
 
 An issue draft is Markdown with front matter:
 
@@ -212,8 +214,8 @@ def finish_issue(
     extra: dict[str, Any] | None = None,
 ) -> int:
     lines: list[str] = []
-    allowed = _kit.filing_allowed(findings, args.pin)
-    code = _kit.report(findings, args.pin, args.json, extra, emit=lines.append)
+    allowed = _kit.filing_allowed(findings, args.fingerprint)
+    code = _kit.report(findings, args.fingerprint, args.json, extra, emit=lines.append)
     if args.emit_body and allowed:
         out = Path(args.emit_body)
         out.write_text(draft["body"], encoding="utf-8")
@@ -222,7 +224,7 @@ def finish_issue(
             if code == _kit.EXIT_PROVISIONAL:
                 lines.append(_kit.PROVISIONAL_FILING_NOTE)
     elif args.emit_body and not args.json:
-        lines.append("No body written: filing needs a run with no errors and no pin mismatch.")
+        lines.append("No body written: filing needs a run with no errors and no rules mismatch.")
     print("\n".join(lines))
     return code
 
@@ -239,20 +241,20 @@ def cmd_batch(args: argparse.Namespace) -> int:
     # The opening order and every rendered body are filing output: they need the
     # WHOLE batch clean, so a later sibling's defect can never leave the batch
     # half filed.
-    allowed = _kit.filing_allowed(findings, args.pin)
+    allowed = _kit.filing_allowed(findings, args.fingerprint)
     extra = {
         "order": order if allowed else [],
         "files": {item["ref"]: str(p) for item, p in zip(items, files, strict=True)},
     }
     if not args.open or not allowed:
-        code = _kit.report(findings, args.pin, args.json, extra)
+        code = _kit.report(findings, args.fingerprint, args.json, extra)
         if not args.json:
             if allowed:
                 print("Open in this order: " + " → ".join(order))
                 if code == _kit.EXIT_PROVISIONAL:
                     print(_kit.PROVISIONAL_FILING_NOTE)
             elif args.open:
-                print("Nothing rendered: opening needs the whole batch free of errors and no pin mismatch.")
+                print("Nothing rendered: opening needs the whole batch free of errors and no rules mismatch.")
         return code
     item = next((it for it in items if it["ref"] == args.open), None)
     if item is None:
@@ -303,7 +305,9 @@ def cmd_roadmap(args: argparse.Namespace) -> int:
         )
     except ValueError as exc:
         return _kit.report(
-            [_kit.finding("roadmap.parse", "roadmap", file=_kit.ROADMAP_PATH, detail=str(exc))], args.pin, args.json
+            [_kit.finding("roadmap.parse", "roadmap", file=_kit.ROADMAP_PATH, detail=str(exc))],
+            args.fingerprint,
+            args.json,
         )
     findings = _kit.validate_roadmap(base, head, _kit.authoring_roles(repo_root, args.context), placement=placement)
     base_ids = {_kit.roadmap_item_id(i) for i in base or []}
@@ -319,7 +323,7 @@ def cmd_roadmap(args: argparse.Namespace) -> int:
                 )
     if not args.json:
         print(f"Compared {_kit.ROADMAP_PATH} against {base_ref}.")
-    return _kit.report(findings, args.pin, args.json, {"base": base_ref})
+    return _kit.report(findings, args.fingerprint, args.json, {"base": base_ref})
 
 
 def cmd_blocker(args: argparse.Namespace) -> int:
@@ -338,12 +342,14 @@ def cmd_blocker(args: argparse.Namespace) -> int:
         base = entries(_kit.read_at(repo_root, base_ref, registry), f"{base_ref}:{registry}")
     except ValueError as exc:
         return _kit.report(
-            [_kit.finding("blocker.registry.parse", "blockers", file=registry, detail=str(exc))], args.pin, args.json
+            [_kit.finding("blocker.registry.parse", "blockers", file=registry, detail=str(exc))],
+            args.fingerprint,
+            args.json,
         )
     findings = _kit.validate_blocker(args.id, base, head, args.ack or [])
     if not args.json:
         print(f"Compared {registry} against {base_ref}.")
-    return _kit.report(findings, args.pin, args.json, {"base": base_ref})
+    return _kit.report(findings, args.fingerprint, args.json, {"base": base_ref})
 
 
 def main(argv: Sequence[str]) -> int:
@@ -352,9 +358,16 @@ def main(argv: Sequence[str]) -> int:
     )
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--repo-root", default=".", help="repository checkout (default: .)")
-    common.add_argument("--pin", default=None, help="the platform's engine pin, when known")
     common.add_argument(
-        "--context", default=None, help="saved get_authoring_context result (live pin and roles, when connected)"
+        "--rules-fingerprint",
+        dest="fingerprint",
+        default=None,
+        help="the platform's authoring rules fingerprint (get_authoring_context's rules_fingerprint), when known",
+    )
+    common.add_argument(
+        "--context",
+        default=None,
+        help="saved get_authoring_context result (live rules fingerprint and roles, when connected)",
     )
     common.add_argument("--json", action="store_true", help="machine-readable output")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -389,7 +402,7 @@ def main(argv: Sequence[str]) -> int:
     args = parser.parse_args(argv)
     try:
         args.context = _kit.load_context(Path(args.context)) if args.context else None
-        args.pin = _kit.context_pin(args.pin, args.context)
+        args.fingerprint = _kit.context_fingerprint(args.fingerprint, args.context)
         return int(args.func(args))
     except (_kit.KitError, ValueError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)

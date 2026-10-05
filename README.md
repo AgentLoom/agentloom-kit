@@ -8,7 +8,11 @@ resolutions, checked by a deterministic validator before anything is filed or
 pushed. Your agent files with your own `gh` and `git`; no AgentLoom credentials
 are needed.
 
-Built for engine pin **`2026.10.02-stable`**. The kit's release tag equals the pin.
+Kit version **`2026.10.4.3`**, built from AgentLoom's authoring rules
+`6d0c4044f0e23d57d9a4bb2f7f0ebaacc8bfdaaeee7486fe5f467589eb9227da`. The kit's release tag equals the kit version: the date
+of the change (`YYYY.M.D`, or `YYYY.M.D.N` for a second release that day). The
+kit is tied to the rules it enforces, not to an engine pin: an engine upgrade
+that changes no authoring rule needs no new kit.
 
 ## Install
 
@@ -62,11 +66,11 @@ to paste. Without it, everything works offline.
 - `skills/agentloom/SKILL.md` — when to file an issue and when to plan a
   roadmap task, and the workflow for each.
 - `skills/agentloom/references/` — the issue body, batch, roadmap task,
-  label and blocker guides, and the engine's tech-skill pool for this pin.
+  label and blocker guides, and the engine's tech-skill pool.
 - `skills/agentloom/scripts/validate.py` — validates an issue draft, a batch,
   a roadmap change or a blocker completion. Exit codes: 0 pass, 1 errors,
   2 usage, 3 provisional (the pin-dependent checks could not be confirmed
-  against the platform's pin — pass `--context` or `--pin`).
+  against the platform's rules — pass `--context` or `--rules-fingerprint`).
 - `skills/agentloom/scripts/roadmap-tag.py` — stamps the provenance tag on new
   roadmap tasks, byte-for-byte as the engine writes it.
 - `skills/agentloom/scripts/blocker-complete.py` — records a planning
@@ -84,5 +88,6 @@ sha256sum -c SHA256SUMS
 
 ## Source
 
-This repository is generated from AgentLoom's authoring rules on every engine
-pin; changes made here are overwritten by the next release.
+This repository is generated from AgentLoom's authoring rules, assistant
+references and kit templates, and released on every change to them; changes
+made here are overwritten by the next release.

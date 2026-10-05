@@ -34,6 +34,10 @@ tasks of the same shape were tagged.
 | `manual_blockers` | — | Human prerequisites as `{ id: BLK-…, title, kind, doc }` (plus `recipient` for an `upstream_request`); author the matching registry row and guide section in the same commit. |
 | `tags` | — | Written only by `roadmap-tag.py`. See Provenance. |
 
+Quote any value that contains ` #` or `: ` (`'…'` or `"…"`): unquoted, YAML
+reads ` #` as a comment and silently drops the rest (`title: … (issue #12)` is
+stored as `… (issue`).
+
 **Engine-owned — never write them:** `status` (beyond `planned` on a new task), `created_by`, `created_at`, `triaged`, `sprint_ref`, `issue_ref`, `planned_at`, `completed_at`, `deferred_from`, `source_repo`. A task another
 repository handed over carries `deferred_from` / `source_repo`; preserve those
 exactly as read.
@@ -47,6 +51,21 @@ is frozen against it — file a follow-up issue instead. Change only the fields
 that alter what the pipeline builds (scope, a missing structured dependency,
 priority, scheduling); never reword for style, never touch engine-owned fields
 or tags, and never delete a task.
+
+## Settling a task
+
+A task whose work already exists, or whose plan no longer applies, while the
+roadmap still shows it open, is settled: `revise_roadmap` → `settle`, `done`
+or `obsolete`. Verify first: find its issues, their pull requests and the
+delivering commit; confirm in this checkout that the behaviour exists or the
+plan was replaced (a resolver's "already implemented" is evidence, not
+proof); and confirm nothing is running on it —
+unfinished work is resumed or steered, not settled. The evidence names the
+delivering commit or the superseding decision. `obsolete` does not satisfy
+dependencies, so `patch` its dependents in the same call; set
+`verified_landing: true` only on the user's word. Close a still-open issue with
+`gh issue close` and a comment: `--reason completed` lets what depends on it
+proceed, `--reason "not planned"` keeps it waiting.
 
 ## Scheduling
 
@@ -112,4 +131,4 @@ New run → Generate backlog → tag scope `user-generated`.
 
 ---
 
-*Generated from AgentLoom's authoring rules for engine pin `2026.10.02-stable`.*
+*Generated from AgentLoom's authoring rules `6d0c4044f0e2`.*

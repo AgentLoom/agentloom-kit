@@ -1,6 +1,6 @@
 {
   "name": "agentloom",
-  "version": "2026.10.2",
+  "version": "2026.10.4.3",
   "description": "Author AgentLoom issues, issue batches, roadmap tasks and blocker resolutions from your own agent, validated before you push.",
   "author": {
     "name": "AgentLoom",

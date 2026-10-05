@@ -109,7 +109,10 @@ TOKEN_PATTERNS = [(p["id"], compile_pattern(p)) for p in RULES["secrets"]["token
 LABELED_ASSIGNMENT = compile_pattern(RULES["secrets"]["labeled_assignment"])
 PLACEHOLDERS = [compile_pattern(p) for p in RULES["secrets"]["placeholder_exemptions"]]
 POOL: list[str] = list(RULES["tech_skills"]["ids"])
-BUILT_FOR_PIN: str = RULES["engine_pin"]
+# The identity of the rules this kit enforces: sha256 of the pin-free rule
+# document (`authoringRulesFingerprint` in @agentloom/shared). The kit carries
+# no engine pin — a pin bump that changes no rule leaves the kit unchanged.
+BUILT_FOR_RULES_FINGERPRINT: str = RULES["rules_fingerprint"]
 
 
 # ── Findings ────────────────────────────────────────────────────────────────
@@ -547,11 +550,41 @@ def _substance_findings(
     acceptance = by_title.get("Acceptance Criteria")
     if acceptance is not None and content_length(acceptance) > 0 and not P["checklistItem"].search(acceptance):
         findings.append(finding("issue.substance.acceptance-not-checklist", path))
+    if acceptance is not None:
+        for needs in unachievable_criteria(acceptance):
+            findings.append(finding("issue.substance.unachievable-criterion", path, needs=needs))
     prose = "\n".join(lines_outside_fences(body)).lower()
     for phrase in ISSUE["meta_narration_phrases"]:
         if contains_phrase(prose, phrase):
             findings.append(finding("issue.substance.meta-narration", path, phrase=phrase.strip()))
     return findings
+
+
+_UNACHIEVABLE = ISSUE["unachievable_criteria"]
+_CRITERION_ITEM = compile_pattern(_UNACHIEVABLE["item"])
+_CRITERION_ALTERNATIVE = compile_pattern(_UNACHIEVABLE["alternative"])
+_CRITERION_SHAPES = [
+    (shape["needs"], compile_pattern(shape["first"]), compile_pattern(shape["second"]))
+    for shape in _UNACHIEVABLE["shapes"]
+]
+
+
+def unachievable_criteria(section: str) -> list[str]:
+    """What each unachievable acceptance criterion requires, one entry per shape.
+
+    Mirrors the engine generator's own check (seed-engine #330): a criterion
+    needs both signals of a shape, and one offering an alternative is exempt.
+    """
+    found: list[str] = []
+    for line in section.split("\n"):
+        item = _CRITERION_ITEM.match(line)
+        criterion = item.group(1) if item else line
+        if not criterion.strip() or _CRITERION_ALTERNATIVE.search(criterion):
+            continue
+        for needs, first, second in _CRITERION_SHAPES:
+            if needs not in found and first.search(criterion) and second.search(criterion):
+                found.append(needs)
+    return found
 
 
 def _validate_draft(
@@ -1174,8 +1207,9 @@ def load_context(path: Path) -> dict[str, Any]:
     """The live authoring context the AgentLoom MCP tool `get_authoring_context` returned.
 
     Saved by the agent as JSON: the tool's structured result, or the whole
-    `tools/call` result carrying it under `structuredContent`. Its `engine_pin`
-    is the platform's pin, its `roles` the resolver roles of the repository's
+    `tools/call` result carrying it under `structuredContent`. Its
+    `rules_fingerprint` identifies the platform's authoring rules (absent from
+    an older server, which leaves the run provisional), its `roles` the resolver roles of the repository's
     org chart on the default branch (null when the platform could not read it),
     and its `user_id` the connected member's uuid for provenance — null when the
     agent connected with an org's headless token, whose work carries no
@@ -1191,11 +1225,11 @@ def load_context(path: Path) -> dict[str, Any]:
         data = data["structuredContent"]
     if not isinstance(data, dict):
         raise KitError(f"--context {path} is not a get_authoring_context result")
-    pin = data.get("engine_pin")
+    fingerprint = data.get("rules_fingerprint")
     user_id = data.get("user_id")
     roles = data.get("roles")
-    if not isinstance(pin, str) or not pin.strip():
-        raise KitError(f"--context {path} carries no engine_pin")
+    if fingerprint is not None and (not isinstance(fingerprint, str) or not fingerprint.strip()):
+        raise KitError(f"--context {path}: rules_fingerprint must be a non-empty string when present")
     if "user_id" not in data or (
         user_id is not None and (not isinstance(user_id, str) or not P["uuid"].search(user_id))
     ):
@@ -1205,14 +1239,19 @@ def load_context(path: Path) -> dict[str, Any]:
     return data
 
 
-def context_pin(pin: str | None, context: dict[str, Any] | None) -> str | None:
-    """The pin to validate against: the live context's, which --pin may only repeat."""
+def context_fingerprint(fingerprint: str | None, context: dict[str, Any] | None) -> str | None:
+    """The rules fingerprint to validate against: the live context's, which
+    --rules-fingerprint may only repeat. A context without one (an older server)
+    yields None — provisional, never a mismatch."""
     if context is None:
-        return pin
-    live = str(context["engine_pin"]).strip()
-    if pin is not None and pin.strip() != live:
-        raise KitError(f"--pin {pin.strip()} disagrees with the live context's engine pin {live}")
-    return live
+        return fingerprint
+    raw = context.get("rules_fingerprint")
+    live = raw.strip() if isinstance(raw, str) else None
+    if fingerprint is not None and live is not None and fingerprint.strip() != live:
+        raise KitError(
+            f"--rules-fingerprint {fingerprint.strip()} disagrees with the live context's rules fingerprint {live}"
+        )
+    return live if live is not None else fingerprint
 
 
 def authoring_roles(repo_root: Path, context: dict[str, Any] | None, required: bool = False) -> list[str] | None:
@@ -1447,29 +1486,31 @@ def complete_blocker(
 # ── Reporting ───────────────────────────────────────────────────────────────
 
 
-def pin_state(pin: str | None) -> str:
-    """`confirmed`, `unknown` (offline, no --pin) or `mismatch`."""
-    if pin is None:
+def rules_state(fingerprint: str | None) -> str:
+    """`confirmed`, `unknown` (offline, no --rules-fingerprint, or an older
+    server's context without one) or `mismatch`."""
+    if fingerprint is None:
         return "unknown"
-    return "confirmed" if pin.strip() == BUILT_FOR_PIN else "mismatch"
+    return "confirmed" if fingerprint.strip() == BUILT_FOR_RULES_FINGERPRINT else "mismatch"
 
 
 PROVISIONAL_FILING_NOTE = (
-    "Filing on a PROVISIONAL result: tell the user the pin-dependent checks ran against the kit's own pin "
-    f"`{BUILT_FOR_PIN}`, not a confirmed platform pin."
+    "Filing on a PROVISIONAL result: tell the user the pin-dependent checks ran against the kit's own rules "
+    f"(fingerprint `{BUILT_FOR_RULES_FINGERPRINT[:12]}`), not rules confirmed against the platform."
 )
 
 
-def filing_allowed(findings: Sequence[dict[str, Any]], pin: str | None) -> bool:
+def filing_allowed(findings: Sequence[dict[str, Any]], fingerprint: str | None) -> bool:
     """Whether a run may produce filing output (a body file, an opening order).
 
     Never with an error of any kind — a provisional, pin-dependent one included,
     since it is an error against the only pool the kit knows — and never on a
-    known pin mismatch. A provisional run with no error may file: Phase 1 has no
-    live source for the platform's pin, and the note above makes the caveat
+    known rules mismatch (the platform's rules fingerprint differs from the
+    kit's). A provisional run with no error may file: offline there is no live
+    source for the platform's rules, and the note above makes the caveat
     explicit to the user.
     """
-    return pin_state(pin) != "mismatch" and not any(f["severity"] == "error" for f in findings)
+    return rules_state(fingerprint) != "mismatch" and not any(f["severity"] == "error" for f in findings)
 
 
 def exit_code(findings: Sequence[dict[str, Any]], state: str) -> int:
@@ -1483,12 +1524,12 @@ def exit_code(findings: Sequence[dict[str, Any]], state: str) -> int:
 
 def report(
     findings: list[dict[str, Any]],
-    pin: str | None,
+    fingerprint: str | None,
     as_json: bool,
     extra: dict[str, Any] | None = None,
     emit: Callable[[str], None] = print,
 ) -> int:
-    state = pin_state(pin)
+    state = rules_state(fingerprint)
     if state == "mismatch":
         findings = [f for f in findings if not f["pin_dependent"]]
     else:
@@ -1502,9 +1543,9 @@ def report(
                 {
                     "status": status,
                     "exit_code": code,
-                    "built_for_pin": BUILT_FOR_PIN,
-                    "pin": pin,
-                    "pin_state": state,
+                    "built_for_rules_fingerprint": BUILT_FOR_RULES_FINGERPRINT,
+                    "rules_fingerprint": fingerprint,
+                    "rules_state": state,
                     "findings": findings,
                     **(extra or {}),
                 },
@@ -1518,11 +1559,12 @@ def report(
         emit(f"{tag} {f['rule']} at {f['path']}: {f['message']}\n    fix: {f['fix']}")
     if state == "mismatch":
         emit(
-            f"PROVISIONAL: kit built for `{BUILT_FOR_PIN}`, platform runs `{pin.strip() if pin else ''}`: update the kit. Pin-dependent checks (tech-skill pool, scheduling/tags grammar, label root) were not run."
+            f"PROVISIONAL: kit built for rules `{BUILT_FOR_RULES_FINGERPRINT}`, platform serves rules `{fingerprint.strip() if fingerprint else ''}`: update the kit. Pin-dependent checks (tech-skill pool, scheduling/tags grammar, label root) were not run."
         )
     elif state == "unknown":
         emit(
-            f"PROVISIONAL: pin-dependent checks ran against the kit's own pin `{BUILT_FOR_PIN}`. Pass --pin <engine pin> when you know the platform's pin; this is not a pass."
+            "PROVISIONAL: pin-dependent checks ran against the kit's own rules, unconfirmed against the platform. "
+            "Pass --context (or --rules-fingerprint) when connected; this is not a pass."
         )
     errors = sum(1 for f in findings if f["severity"] == "error")
     warnings = sum(1 for f in findings if f["severity"] == "warning")

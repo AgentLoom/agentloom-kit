@@ -14,6 +14,9 @@ that explains it. The AgentLoom dashboard Inbox lists the open ones.
   to a paused run. They are answered with `respond_to_blocker` when connected,
   or in the AgentLoom dashboard with **Record answers & resume** — either
   records the answers and resumes the run. Never edit them in the registry.
+  A resume on its own is not an answer: a blocker is settled only by live
+  evidence that its condition now holds, or by your recorded answer, which
+  names the blocker's id.
 
 ## Statuses
 
@@ -53,4 +56,4 @@ To check a hand edit: `python3 $KIT/scripts/validate.py blocker BLK-007`.
 
 ---
 
-*Generated from AgentLoom's authoring rules for engine pin `2026.10.02-stable`.*
+*Generated from AgentLoom's authoring rules `6d0c4044f0e2`.*

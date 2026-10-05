@@ -1,6 +1,5 @@
 {
   "version": 1,
-  "engine_pin": "2026.10.02-stable",
   "rules": {
     "secret.token-shape": {
       "severity": "error",
@@ -169,6 +168,13 @@
       "local_only": false,
       "message": "`## Acceptance Criteria` has no checklist items",
       "fix": "Write each criterion as a testable `- [ ] …` item."
+    },
+    "issue.substance.unachievable-criterion": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "an acceptance criterion requires {needs}, which no single resolver round can do",
+      "fix": "A round makes one commit and one push and is judged on the final head. Write the proof as a test, or offer an alternative the resolver can satisfy (\"or an equivalent documented check\"), and move a check that genuinely needs an operator to `## Manual Verification`."
     },
     "issue.substance.meta-narration": {
       "severity": "warning",
@@ -751,6 +757,7 @@
       "Risks",
       "Open Questions",
       "Out of Scope",
+      "Manual Verification",
       "References",
       "Tech Skills"
     ],
@@ -775,6 +782,66 @@
       "let me",
       "i will now"
     ],
+    "unachievable_criteria": {
+      "item": {
+        "source": "^\\s*(?:[-*+]\\s+(?:\\[[ xX]\\]\\s*)?|\\d+[.)]\\s+)(\\S.*)$",
+        "flags": ""
+      },
+      "alternative": {
+        "source": "\\bor\\s+(?:an\\s+)?equivalent\\w*\\b",
+        "flags": "i"
+      },
+      "shapes": [
+        {
+          "id": "throwaway_or_reverted_commit",
+          "needs": "a throwaway, temporary or reverted commit",
+          "first": {
+            "source": "\\b(?:throwaway|throw-away|temporary|disposable|scratch)\\s+(?:\\w+\\s+){0,2}?(?:commit|push|branch|failure|change|run)\\b",
+            "flags": "i"
+          },
+          "second": {
+            "source": "\\brevert(?:s|ed|ing)?\\b\\s*(?:\\w+\\s+){0,3}?(?:commit|push|branch|failure|change|run|it)\\b",
+            "flags": "i"
+          }
+        },
+        {
+          "id": "deliberately_red_run",
+          "needs": "a deliberately red or failing run",
+          "first": {
+            "source": "\\b(?:deliberate|deliberately|intentional|intentionally|on purpose)\\b",
+            "flags": "i"
+          },
+          "second": {
+            "source": "\\b(?:red|failing|fails|failure)\\b\\s*(?:\\w+\\s+){0,3}?\\b(?:run|runs|check|checks|job|jobs|workflow|workflows|gate|gates|build|builds|pipeline|pipelines|ci)\\b|\\b(?:run|runs|check|checks|job|jobs|workflow|workflows|gate|gates|build|builds|pipeline|pipelines|ci)\\b\\s*(?:\\w+\\s+){0,3}?\\b(?:red|failing|fails|failure)\\b",
+            "flags": "i"
+          }
+        },
+        {
+          "id": "multiple_pushes",
+          "needs": "more than one push",
+          "first": {
+            "source": "\\b(?:two|2|three|3|multiple|several|more than one|separate|second)\\b|\\bthen\\s+(?:re-?)?push\\b",
+            "flags": "i"
+          },
+          "second": {
+            "source": "\\b(?:pushes|push\\s+(?:events|cycles))\\b|\\b(?:two|2|three|3|multiple|several|more than one|separate|second|consecutive|successive)\\s+(?:\\w+\\s+){0,2}?(?:ci|workflow|gate)?\\s*runs\\b",
+            "flags": "i"
+          }
+        },
+        {
+          "id": "deployed_environment",
+          "needs": "an observation in production, staging or a deployed environment",
+          "first": {
+            "source": "\\b(?:in|on|against)\\s+(?:production|staging|(?:a|the)\\s+(?:deployed|live)\\s+environment)\\b",
+            "flags": "i"
+          },
+          "second": {
+            "source": "\\b(?:verif\\w+|observ\\w+|confirm\\w+|check\\w*|validat\\w+|smoke\\w*|availab\\w+|reachab\\w+|works?|working)\\b",
+            "flags": "i"
+          }
+        }
+      ]
+    },
     "depends_on_marker": "SE_DEPENDS_ON_ISSUES",
     "origin": {
       "key": "agentloom-origin",
@@ -942,7 +1009,7 @@
       "flags": "im"
     },
     "codeReference": {
-      "source": "([A-Za-z0-9_][A-Za-z0-9_./-]*\\.[A-Za-z0-9]+):([0-9]+)",
+      "source": "(\\.?[A-Za-z0-9_][A-Za-z0-9_./-]*\\.[A-Za-z0-9]+):([0-9]+)",
       "flags": ""
     },
     "checklistItem": {
@@ -1053,7 +1120,6 @@
     ]
   },
   "tech_skills": {
-    "engine_pin": "2026.10.02-stable",
     "ids": [
       "db-migrations",
       "expo-building-native-ui",
@@ -1064,5 +1130,6 @@
       "playwright-cli",
       "upgrading-expo"
     ]
-  }
+  },
+  "rules_fingerprint": "6d0c4044f0e23d57d9a4bb2f7f0ebaacc8bfdaaeee7486fe5f467589eb9227da"
 }

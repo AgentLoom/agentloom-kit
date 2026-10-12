@@ -23,9 +23,19 @@ act on it without rediscovering, re-reasoning, or hitting design gaps.
   environment or more than one push; never acceptance criteria.
 
 A `## References` section is welcome only when it points at real repository
-documents the resolver should read, as relative Markdown links. Each is loaded
-in full into the resolver's context: link only the few design documents the
-change depends on — never source files, never a path containing `)`.
+files the resolver should read, as relative Markdown links. A reference is
+inlined into the resolver's context only when its trimmed text fits both the
+32,000-character per-item cap and what remains of the 64,000-character total.
+References are decided file by file in the order files first appear — a file's
+whole-document reference before its sections — and a section is dropped when
+its whole document was inlined. A reference that does not fit becomes a pointer
+the resolver reads on demand, carrying a heading outline or a one-line hint
+while the pointer budget lasts, and consumes none of the total. So put the most
+important document first, and point at the section when a document is larger
+than the per-item cap: `doc.md#heading-slug` (or an explicit `<a id>` anchor)
+for prose, `path#L10-L20` (1-based, inclusive; `#L10` for one line) for code. A
+selector that does not resolve falls back to the whole file. Never link a path
+containing `)`.
 `## Tech Skills` is described below.
 
 ## Content guidance
@@ -197,4 +207,4 @@ follow-up issue that references this one by number.
 
 ---
 
-*Generated from AgentLoom's authoring rules `6d0c4044f0e2`.*
+*Generated from AgentLoom's authoring rules `de2ffec51478`.*

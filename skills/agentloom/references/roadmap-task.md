@@ -30,7 +30,7 @@ tasks of the same shape were tagged.
 | `parent_id` | — | An existing or sibling id when this task is a follow-up or subtask of another. |
 | `scheduling` | — | `pinned` or `parked`, or absent. See below. |
 | `tech_skills` | — | Ids from `references/tech-skills.json`. See below. |
-| `docs` | — | Repository paths of relevant design documents. |
+| `docs` | — | Repository paths the generated issue's `## References` carries verbatim, most important first. An entry may select a Markdown section (`doc.md#heading-slug`, or an explicit `<a id>` anchor) or a line range of any text file (`path#L10-L20`, `#L10` for one line); point at the section when a document is larger than the resolver's 32,000-character per-item cap. The same inline budgets as an issue's references apply (`references/issue-body.md`). |
 | `manual_blockers` | — | Human prerequisites as `{ id: BLK-…, title, kind, doc }` (plus `recipient` for an `upstream_request`); author the matching registry row and guide section in the same commit. |
 | `tags` | — | Written only by `roadmap-tag.py`. See Provenance. |
 
@@ -131,4 +131,4 @@ New run → Generate backlog → tag scope `user-generated`.
 
 ---
 
-*Generated from AgentLoom's authoring rules `6d0c4044f0e2`.*
+*Generated from AgentLoom's authoring rules `de2ffec51478`.*

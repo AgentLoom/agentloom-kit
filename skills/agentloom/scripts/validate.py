@@ -52,6 +52,7 @@ from pathlib import Path
 from typing import Any
 
 import _kit
+import _selectors
 
 
 def split_front_matter(text: str, source: str) -> tuple:
@@ -188,6 +189,55 @@ def path_findings(body: str, repo_root: Path, prefix: str = "") -> list[dict[str
     return findings
 
 
+_ISSUE_REFERENCE_RULES = {
+    "missing": "issue.substance.path-not-found",
+    "unresolved": "issue.references.selector-unresolved",
+    "oversize": "issue.references.oversize",
+    "total": "issue.references.total-oversize",
+}
+_ROADMAP_DOC_RULES = {
+    "unresolved": "roadmap.docs.selector-unresolved",
+    "oversize": "roadmap.docs.oversize",
+    "total": "roadmap.docs.total-oversize",
+}
+
+
+def references_section(body: str) -> str | None:
+    """The `## References` section body, or None (the engine matches the title case-insensitively)."""
+    _preamble, sections = _kit.parse_body(body)
+    for title, text in sections:
+        if title.strip().lower() == "references":
+            return text
+    return None
+
+
+def reference_findings(
+    body: str, repo_root: Path, prefix: str = "", already: Sequence[dict[str, Any]] = ()
+) -> list[dict[str, Any]]:
+    """What the engine does with the `## References` links (`_selectors.py`).
+
+    A link whose path is missing reports `issue.substance.path-not-found`
+    (once per path, alongside the cited-path check); a selector the engine
+    cannot honour, an excerpt over the item cap, and the first excerpt the
+    total cap demotes are warnings.
+    """
+    section = references_section(body)
+    if section is None:
+        return []
+    links = _selectors.extract_reference_links(section)
+    found = _selectors.reference_findings(
+        links,
+        repo_root,
+        lambda rule_id, **params: _kit.finding(rule_id, f"{prefix}body", **params),
+        _ISSUE_REFERENCE_RULES,
+    )
+    out: list[dict[str, Any]] = []
+    for f in found:
+        if f not in already and f not in out:
+            out.append(f)
+    return out
+
+
 def gh_command(title: str, labels: Sequence[str], body_path: Path) -> str:
     parts = ["gh", "issue", "create", "--title", title, "--body-file", str(body_path)]
     for label in labels:
@@ -203,6 +253,7 @@ def cmd_issue(args: argparse.Namespace) -> int:
     draft = load_draft(Path(args.file), batch=False)
     findings = _kit.validate_issue(draft, _kit.authoring_roles(repo_root, args.context, required=True))
     findings += path_findings(draft["body"], repo_root)
+    findings += reference_findings(draft["body"], repo_root, already=findings)
     findings += duplicate_findings(draft, repo_root, Path(args.existing) if args.existing else None)
     return finish_issue(args, draft, findings)
 
@@ -238,6 +289,7 @@ def cmd_batch(args: argparse.Namespace) -> int:
     findings, order = _kit.validate_batch(items, roles)
     for i, item in enumerate(items):
         findings += path_findings(item["body"], repo_root, f"items[{i}].")
+        findings += reference_findings(item["body"], repo_root, f"items[{i}].", already=findings)
     # The opening order and every rendered body are filing output: they need the
     # WHOLE batch clean, so a later sibling's defect can never leave the batch
     # half filed.
@@ -281,6 +333,7 @@ def cmd_batch(args: argparse.Namespace) -> int:
         body = f"<!-- {_kit.ISSUE['depends_on_marker']}: {', '.join(str(n) for n in deps)} -->\n{body}"
     rendered = {"title": item["title"], "labels": item["labels"], "body": body}
     issue_findings = _kit.validate_issue(rendered, roles) + path_findings(body, repo_root)
+    issue_findings += reference_findings(body, repo_root, already=issue_findings)
     return finish_issue(args, rendered, issue_findings, {"order": order, "ref": args.open})
 
 
@@ -321,6 +374,12 @@ def cmd_roadmap(args: argparse.Namespace) -> int:
                 findings.append(
                     _kit.finding("roadmap.docs.not-found", f"roadmap[{item_id}].docs", id=item_id, path=doc)
                 )
+        findings += _selectors.reference_findings(
+            docs,
+            repo_root,
+            lambda rule_id, _id=item_id, **params: _kit.finding(rule_id, f"roadmap[{_id}].docs", id=_id, **params),
+            _ROADMAP_DOC_RULES,
+        )
     if not args.json:
         print(f"Compared {_kit.ROADMAP_PATH} against {base_ref}.")
     return _kit.report(findings, args.fingerprint, args.json, {"base": base_ref})

@@ -34,4 +34,4 @@ decomposition, then add the next batch against the real ids already committed.
 
 ---
 
-*Generated from AgentLoom's authoring rules `6d0c4044f0e2`.*
+*Generated from AgentLoom's authoring rules `de2ffec51478`.*

@@ -155,6 +155,27 @@
       "message": "`{path}` is cited but does not exist in this checkout",
       "fix": "Cite a path you verified in the checkout."
     },
+    "issue.references.selector-unresolved": {
+      "severity": "warning",
+      "pin_dependent": false,
+      "local_only": true,
+      "message": "`{reference}` in `## References` does not resolve: {reason}; the engine inlines the whole file instead",
+      "fix": "Make the selector resolvable: {remedy}."
+    },
+    "issue.references.oversize": {
+      "severity": "warning",
+      "pin_dependent": false,
+      "local_only": true,
+      "message": "`{reference}` in `## References` selects {size} characters, over the 32,000-character inline cap; the engine demotes it to a pointer",
+      "fix": "Point at the section you need{remedy}."
+    },
+    "issue.references.total-oversize": {
+      "severity": "warning",
+      "pin_dependent": false,
+      "local_only": true,
+      "message": "`{reference}` in `## References` ({size} characters) fits the 32,000-character item cap, but the references before it leave only {remaining} of the 64,000-character total; the engine demotes it and every later reference that does not fit to pointers",
+      "fix": "Point the earlier references at the sections or line ranges you need so the excerpts fit 64,000 characters."
+    },
     "issue.substance.section-thin": {
       "severity": "warning",
       "pin_dependent": false,
@@ -602,6 +623,27 @@
       "local_only": true,
       "message": "`{path}` in `docs` of `{id}` does not exist in this checkout",
       "fix": "Point at a document that exists."
+    },
+    "roadmap.docs.selector-unresolved": {
+      "severity": "warning",
+      "pin_dependent": false,
+      "local_only": true,
+      "message": "`{reference}` in `docs` of `{id}` does not resolve: {reason}; the engine inlines the whole file instead",
+      "fix": "Make the selector resolvable: {remedy}."
+    },
+    "roadmap.docs.oversize": {
+      "severity": "warning",
+      "pin_dependent": false,
+      "local_only": true,
+      "message": "`{reference}` in `docs` of `{id}` selects {size} characters, over the 32,000-character inline cap; the engine demotes it to a pointer",
+      "fix": "Point at the section you need{remedy}."
+    },
+    "roadmap.docs.total-oversize": {
+      "severity": "warning",
+      "pin_dependent": false,
+      "local_only": true,
+      "message": "`{reference}` in `docs` of `{id}` ({size} characters) fits the 32,000-character item cap, but the references before it leave only {remaining} of the 64,000-character total; the engine demotes it and every later reference that does not fit to pointers",
+      "fix": "Point the earlier references at the sections or line ranges you need so the excerpts fit 64,000 characters."
     },
     "roadmap.manual-blocker.invalid": {
       "severity": "error",
@@ -1131,5 +1173,5 @@
       "upgrading-expo"
     ]
   },
-  "rules_fingerprint": "6d0c4044f0e23d57d9a4bb2f7f0ebaacc8bfdaaeee7486fe5f467589eb9227da"
+  "rules_fingerprint": "de2ffec51478ecfc7a48718b46452e30e88d33562ebe3a31b8c386a1d8ac50ae"
 }

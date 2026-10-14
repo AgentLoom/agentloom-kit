@@ -8,8 +8,8 @@ resolutions, checked by a deterministic validator before anything is filed or
 pushed. Your agent files with your own `gh` and `git`; no AgentLoom credentials
 are needed.
 
-Kit version **`2026.10.11`**, built from AgentLoom's authoring rules
-`de2ffec51478ecfc7a48718b46452e30e88d33562ebe3a31b8c386a1d8ac50ae`. The kit's release tag equals the kit version: the date
+Kit version **`2026.10.13`**, built from AgentLoom's authoring rules
+`296392c225751c91922f9dfd8b007f07c51eb96d27525a7a5baf810484e9aace`. The kit's release tag equals the kit version: the date
 of the change (`YYYY.M.D`, or `YYYY.M.D.N` for a second release that day). The
 kit is tied to the rules it enforces, not to an engine pin: an engine upgrade
 that changes no authoring rule needs no new kit.

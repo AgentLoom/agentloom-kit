@@ -3,7 +3,7 @@ name: agentloom
 description: File work for AgentLoom correctly from the IDE — resolver-ready GitHub issues, dependency-ordered issue batches, roadmap tasks in .seed-engine/roadmap.yml, and manual-blocker resolutions — checked by a deterministic validator before anything is filed or pushed. Use when the user asks to file, queue, plan or hand work to AgentLoom or Seed-Engine, to put something on the roadmap, to pin or park a roadmap task, to complete a BLK-* blocker, or to check a hand-written issue or roadmap edit before pushing.
 compatibility: Needs Python 3.10+ with PyYAML and ruamel.yaml, git, and the GitHub CLI (gh) for filing issues. Works offline with no AgentLoom credentials; the optional AgentLoom MCP server adds the live authoring context and your user id.
 metadata:
-  built_for_rules_fingerprint: "de2ffec51478ecfc7a48718b46452e30e88d33562ebe3a31b8c386a1d8ac50ae"
+  built_for_rules_fingerprint: "296392c225751c91922f9dfd8b007f07c51eb96d27525a7a5baf810484e9aace"
 ---
 
 # AgentLoom
@@ -185,7 +185,7 @@ or `validate.py blocker <BLK-id>`. Add `--json` for machine-readable findings
 
 ## Exit codes and the platform's rules
 
-This kit was built from AgentLoom's authoring rules `de2ffec51478ecfc7a48718b46452e30e88d33562ebe3a31b8c386a1d8ac50ae`
+This kit was built from AgentLoom's authoring rules `296392c225751c91922f9dfd8b007f07c51eb96d27525a7a5baf810484e9aace`
 (`scripts/authoring-rules.json`, `rules_fingerprint`). Some checks depend on
 the engine the platform runs: the tech-skill pool, the `scheduling` / `tags`
 grammar, the label root. Unconfirmed against the platform, those results are

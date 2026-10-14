@@ -38,7 +38,7 @@ Quote any value that contains ` #` or `: ` (`'…'` or `"…"`): unquoted, YAML
 reads ` #` as a comment and silently drops the rest (`title: … (issue #12)` is
 stored as `… (issue`).
 
-**Engine-owned — never write them:** `status` (beyond `planned` on a new task), `created_by`, `created_at`, `triaged`, `sprint_ref`, `issue_ref`, `planned_at`, `completed_at`, `deferred_from`, `source_repo`. A task another
+**Engine-owned — never write them:** `status` (beyond `planned` on a new task), `created_by`, `created_at`, `triaged`, `sprint_ref`, `issue_ref`, `planned_at`, `completed_at`, `deferred_from`, `source_repo`, `settled_by`, `settled_run`, `settle_evidence`. A task another
 repository handed over carries `deferred_from` / `source_repo`; preserve those
 exactly as read.
 
@@ -131,4 +131,4 @@ New run → Generate backlog → tag scope `user-generated`.
 
 ---
 
-*Generated from AgentLoom's authoring rules `de2ffec51478`.*
+*Generated from AgentLoom's authoring rules `296392c22575`.*

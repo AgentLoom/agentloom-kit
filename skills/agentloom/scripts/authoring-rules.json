@@ -927,7 +927,10 @@
       "planned_at",
       "completed_at",
       "deferred_from",
-      "source_repo"
+      "source_repo",
+      "settled_by",
+      "settled_run",
+      "settle_evidence"
     ],
     "disposition_fields": [
       "scheduling",
@@ -1173,5 +1176,5 @@
       "upgrading-expo"
     ]
   },
-  "rules_fingerprint": "de2ffec51478ecfc7a48718b46452e30e88d33562ebe3a31b8c386a1d8ac50ae"
+  "rules_fingerprint": "296392c225751c91922f9dfd8b007f07c51eb96d27525a7a5baf810484e9aace"
 }

@@ -21,6 +21,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+from urllib.parse import unquote
 
 MARKDOWN_SUFFIXES = (".md", ".markdown")
 REFERENCE_INLINE_ITEM_MAX_CHARS = 32_000
@@ -33,21 +34,55 @@ _FENCE_OPEN_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})(.*)$")
 _LINE_RANGE_RE = re.compile(r"^L(\d+)(?:-L(\d+))?$")
 _MD_LINK_RE = re.compile(r"\[(?:[^\]]*)\]\((?P<url>[^)]+)\)")
 _ANY_HEADING_RE = re.compile(r"^#{1,6}\s+\S")
+# seed_engine/github/contract.py (2026.10.16-stable): a list line carrying one
+# bare URL, and a permalink into a GitHub repository file at a fixed commit.
+_BARE_URL_LINE_RE = re.compile(r"^\s*[-*+]\s+(?P<url>https?://\S+)\s*$")
+_PERMALINK_RE = re.compile(
+    r"^https?://github\.com/(?P<owner>[^/]+)/(?P<repo>[^/]+)/blob/"
+    r"(?P<sha>[0-9a-f]{7,40})/(?P<path>[^#?]+)(?:\?plain=1)?(?:#(?P<fragment>.+))?$"
+)
 
 
-def extract_reference_links(section_body: str) -> list[str]:
-    """Link targets of a `## References` section body, in order (http(s) skipped)."""
-    out: list[str] = []
+def extract_reference_entries(section_body: str, repo_slug: str | None = None) -> list[tuple[str, str | None]]:
+    """`(reference, sha)` for each `## References` entry, in order.
+
+    The engine's `parse_reference_links`: a repo-relative Markdown link passes
+    through unpinned (`sha` None); a permalink into `repo_slug` (bare on a list
+    line or inside a Markdown link; owner/repo compared case-insensitively)
+    projects to its URL-decoded `path#fragment`, pinned at its lowercase sha.
+    Any other URL — another host, another repository, or every permalink when
+    `repo_slug` is None — is skipped.
+    """
+    own = (repo_slug or "").strip().lower()
+    out: list[tuple[str, str | None]] = []
     for raw in section_body.splitlines():
         line = raw.rstrip()
         if _ANY_HEADING_RE.match(line):
             break
-        for match in _MD_LINK_RE.finditer(line):
-            url = match.group("url")
-            if url.startswith("http://") or url.startswith("https://"):
+        bare = _BARE_URL_LINE_RE.match(line)
+        urls = [bare.group("url")] if bare else [m.group("url") for m in _MD_LINK_RE.finditer(line)]
+        for url in urls:
+            if not (url.startswith("http://") or url.startswith("https://")):
+                out.append((url, None))
                 continue
-            out.append(url)
+            permalink = _PERMALINK_RE.match(url)
+            if permalink is None or not own:
+                continue
+            if f"{permalink.group('owner')}/{permalink.group('repo')}".lower() != own:
+                continue
+            path = unquote(permalink.group("path"))
+            fragment = permalink.group("fragment")
+            out.append((f"{path}#{fragment}" if fragment else path, permalink.group("sha").lower()))
     return out
+
+
+def extract_reference_links(section_body: str, repo_slug: str | None = None) -> list[str]:
+    """Link targets of a `## References` section body, in order.
+
+    Relative targets as written; same-repository permalinks projected to
+    `path#fragment` (see `extract_reference_entries`); other URLs skipped.
+    """
+    return [reference for reference, _sha in extract_reference_entries(section_body, repo_slug)]
 
 
 def split_reference(reference: str) -> tuple[str, str | None]:
@@ -133,6 +168,90 @@ def scan_headings(text: str) -> list[Heading]:
 
 def heading_slugs(text: str) -> list[str]:
     return [h.slug for h in scan_headings(text)]
+
+
+# ── The guide-section Validate detector (issue #2195) ──────────────────────
+#
+# Seed-Engine's `guide_section_text` / `section_has_validate_block` /
+# `validate_section_for_pointer` (`seed_engine/utils/blocker_registry.py`,
+# seed-engine#407); the TypeScript twin is `shared/src/authoring/
+# validate-block.ts`, and both are held to `corpus/validate-block.json`.
+
+VALIDATE_MARKER = "**Validate:**"
+BOOTSTRAP_GUIDE_PATH = ".seed-engine/docs/bootstrap-guide.md"
+
+
+def guide_section_text(guide_text: str, anchor: str) -> tuple[str, str] | None:
+    """`(heading, section)` for an `<a id>` anchor (else a heading slug), up to the next `## ` line."""
+    wanted = anchor.strip()
+    if not wanted or not guide_text:
+        return None
+    headings = scan_headings(guide_text)
+    match = next((h for h in headings if wanted in h.anchor_ids), None)
+    if match is None:
+        match = next((h for h in headings if h.slug == wanted), None)
+    if match is None:
+        return None
+    lines = guide_text.split("\n")
+    end = next((i for i in range(match.line_index + 1, len(lines)) if lines[i].startswith("## ")), len(lines))
+    return match.text, "\n".join(lines[match.line_index : end])
+
+
+def section_has_validate_block(section: str) -> bool:
+    """True when any line, after leading whitespace, starts with `**Validate:**`."""
+    return any(line.lstrip().startswith(VALIDATE_MARKER) for line in section.split("\n"))
+
+
+def extract_validate_block(section: str) -> dict[str, str | None] | None:
+    """The first Validate line's prose and the fenced command block right after it."""
+    lines = section.split("\n")
+    at = next((i for i, line in enumerate(lines) if line.lstrip().startswith(VALIDATE_MARKER)), None)
+    if at is None:
+        return None
+    rest = lines[at].lstrip()[len(VALIDATE_MARKER) :].strip()
+    fenced = fenced_line_mask(lines)
+    commands: str | None = None
+    if not fenced[at]:
+        i = at + 1
+        while i < len(lines) and lines[i].strip() == "":
+            i += 1
+        block: list[str] = []
+        while i < len(lines) and fenced[i]:
+            block.append(lines[i])
+            i += 1
+        if block:
+            commands = "\n".join(block)
+    return {"prose": rest or None, "commands": commands}
+
+
+def parse_guide_pointer(pointer: str | None) -> dict[str, Any] | None:
+    """A registry `file` pointer's anchor and candidate paths, in the engine's order."""
+    text = (pointer or "").strip()
+    if "#" not in text:
+        return None
+    doc_rel, anchor = (part.strip() for part in text.split("#", 1))
+    if not anchor:
+        return None
+    guide_name = BOOTSTRAP_GUIDE_PATH.rsplit("/", 1)[-1]
+    paths: list[str] = []
+    if not doc_rel or doc_rel.rsplit("/", 1)[-1] == guide_name:
+        paths.append(BOOTSTRAP_GUIDE_PATH)
+    if doc_rel:
+        clean = re.sub(r"^\.?/", "", doc_rel)
+        if clean not in paths:
+            paths.append(clean)
+    return {"anchor": anchor, "paths": paths}
+
+
+def validate_section_for_pointer(guide_text: str | None, pointer: str | None) -> tuple[str, str] | None:
+    """The pointer's section when it carries a Validate block, else None (so hosts skip as the engine does)."""
+    parsed = parse_guide_pointer(pointer)
+    if parsed is None or guide_text is None:
+        return None
+    section = guide_section_text(guide_text, parsed["anchor"])
+    if section is None or not section_has_validate_block(section[1]):
+        return None
+    return section
 
 
 def line_count(text: str) -> int:
@@ -291,6 +410,15 @@ def read_repo_file(repo_root: Path, path: str) -> tuple[str | None, str]:
         return None, "unreadable"
 
 
+def _constant_reader(text: str | None) -> Callable[[str], str | None]:
+    """A `read_file` for `resolve_reference` that returns `text` for any path."""
+
+    def read(_path: str) -> str | None:
+        return text
+
+    return read
+
+
 def inline_size(text: str) -> int:
     return len(text.strip())
 
@@ -441,7 +569,7 @@ def reference_findings(
             status = "missing"
             if path:
                 text, status = read_repo_file(repo_root, path)
-                resolved = resolve_reference(reference, lambda _p, t=text: t)
+                resolved = resolve_reference(reference, _constant_reader(text))
             if resolved is None:
                 if path and status == "missing" and "missing" in rules:
                     findings.append(make(rules["missing"], path=path, reference=reference))

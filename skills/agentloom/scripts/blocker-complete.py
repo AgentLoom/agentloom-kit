@@ -2,19 +2,28 @@
 """Record a manual blocker's resolution in `.seed-engine/blockers-registry.yml`.
 
     blocker-complete.py <BLK-id> --status completed --resolution "<summary>"
+                        [--observed "<what Validate showed>"]
                         [--ack LABEL ...] [--date YYYY-MM-DD] [--repo-root PATH]
 
-Writes `status`, `resolved` and `resolution_summary` on one planning blocker —
-and patches the `## Resolution` section of an upstream_request document — the
-way the engine's `seed-engine blocker resolve` does, after the same gates the
-AgentLoom blocker route applies:
+Writes `status`, `resolved` and `resolution_summary` (and `observed`) on one
+planning blocker — and patches the `## Resolution` section of an
+upstream_request document — the way the engine's `seed-engine blocker resolve`
+does, after the same gates the AgentLoom blocker route applies:
 
-  * resolver blockers (`BLK-RES-*`) are refused: they are answered on the run;
+  * resolver blockers (`BLK-RES-*`, `origin: resolver`, or tied to an issue
+    with no `origin`) are refused: they are answered on the run. A planning
+    blocker a resolver round tied to an issue settles, and loses the tie;
   * the status only moves forward for the blocker's kind;
-  * `agreed`, `rejected` and `completed` need a resolution summary;
-  * the summary is screened with the platform's secret patterns. A credential
-    token shape is refused outright; a secret-labelled assignment
-    (`API_KEY=…`) is refused until you confirm that label with --ack.
+  * `agreed`, `rejected` and `completed` need a resolution summary, and for
+    `agreed` and `completed` a placeholder ("done", "ok", "marked as
+    complete" …) or anything under 12 characters is refused;
+  * an operator_action completed against a guide section that carries a
+    `**Validate:**` block needs --observed: run the check and record what it
+    showed. It is recorded as the blocker's `observed` field, which the
+    planner reads as the evidence the gate is met;
+  * the summary and the observation are screened with the platform's secret
+    patterns. A credential token shape is refused outright; a secret-labelled
+    assignment (`API_KEY=…`) is refused until you confirm that label with --ack.
 
 Nothing is committed. Review the diff, then commit and push to the default
 branch; the push wakes AgentLoom.
@@ -44,6 +53,11 @@ def main(argv: list) -> int:
         "--resolution", default="", help="plain-text summary of what was decided or completed — no secret values"
     )
     parser.add_argument(
+        "--observed",
+        default="",
+        help="what the guide section's Validate: check showed — required when the section has one; no secret values",
+    )
+    parser.add_argument(
         "--ack", action="append", default=[], help="a secret-labelled variable confirmed not to hold a secret"
     )
     parser.add_argument("--date", default=None, help="resolution date (default: today, UTC)")
@@ -58,7 +72,14 @@ def main(argv: list) -> int:
     refusals: list = []
     try:
         written = _kit.complete_blocker(
-            Path(args.repo_root), args.id, args.status, args.resolution, resolved, args.ack, on_refusal=refusals.append
+            Path(args.repo_root),
+            args.id,
+            args.status,
+            args.resolution,
+            resolved,
+            args.ack,
+            on_refusal=refusals.append,
+            observed=args.observed,
         )
     except _kit.KitError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
@@ -68,7 +89,7 @@ def main(argv: list) -> int:
             print(f"REFUSED: {message}", file=sys.stderr)
         return _kit.EXIT_ERRORS
     print(f"Recorded {args.id} → {args.status} ({resolved}) in: {', '.join(written)}")
-    print("Next: run the guide section's Validate: check from a public vantage, then")
+    print("Next: review the diff, then")
     print(f"  git add {' '.join(written)} && git commit -m 'Complete {args.id}' && git push")
     return _kit.EXIT_OK
 

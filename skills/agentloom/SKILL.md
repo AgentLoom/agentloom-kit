@@ -3,7 +3,7 @@ name: agentloom
 description: File work for AgentLoom correctly from the IDE — resolver-ready GitHub issues, dependency-ordered issue batches, roadmap tasks in .seed-engine/roadmap.yml, and manual-blocker resolutions — checked by a deterministic validator before anything is filed or pushed. Use when the user asks to file, queue, plan or hand work to AgentLoom or Seed-Engine, to put something on the roadmap, to pin or park a roadmap task, to complete a BLK-* blocker, or to check a hand-written issue or roadmap edit before pushing.
 compatibility: Needs Python 3.10+ with PyYAML and ruamel.yaml, git, and the GitHub CLI (gh) for filing issues. Works offline with no AgentLoom credentials; the optional AgentLoom MCP server adds the live authoring context and your user id.
 metadata:
-  built_for_rules_fingerprint: "296392c225751c91922f9dfd8b007f07c51eb96d27525a7a5baf810484e9aace"
+  built_for_rules_fingerprint: "26fb4460cddc57fc1af25bd615798f8e2b85162d8cf2ef05cbf8ae186668ac7c"
 ---
 
 # AgentLoom
@@ -46,6 +46,24 @@ blockers, filing, roadmap changes, accepting recommendations). A call that
 needs one they have not granted makes the client ask them to sign in again for
 it — tell them what it is for.
 
+What a permission allows also depends on the user's role on the repository the
+call acts on, checked on every call:
+
+- filing issues, runs (starting, resuming, steering, cap resets), blockers and
+  approvals need Contribute on the repository;
+- changing the roadmap, promoting its version, and merging a roadmap, genesis
+  or maintenance pull request need Maintain;
+- accepting a recommendation needs Admin on its repository.
+
+Someone with Propose on a repository can read it here but not act: what they
+ask for in the dashboard's chat goes to review as a proposal, which only the
+dashboard Inbox decides.
+
+A repository the user has no role on answers "Not found." exactly like one that
+does not exist. A refusal that names a role is final for this user: relay it,
+and do not ask them to sign in again — a new sign-in cannot grant what their
+role does not allow.
+
 Every write:
 
 1. Call it with `preview: true` first and show the user what it would do.
@@ -60,7 +78,7 @@ Every write:
 
 | The user wants | Tool |
 |---|---|
-| File without `gh` or a checkout | `open_issue`, or `open_issue_batch` for 2–10 linked issues — the platform checks, labels and stamps them; `scheduling: "parked"` files one that must not start yet (`references/labels.md`) |
+| File without `gh` or a checkout | `open_issue`, or `open_issue_batch` for 2–10 linked issues — the platform checks, labels and stamps them; `scheduling: "parked"` files one that must not start yet (`references/labels.md`). From a checkout, pass the `baseline` that `validate.py issue` prints on `open_issue`: the platform pins the issue's `## References` at that commit |
 | "Run it now" | `dispatch_run` on the issue |
 | A stopped run going again | `get_run_failure`, then `steer_run` (read `references/steer-guidance.md` first) or `resume_run`; `reset_cap: true` only when the run's cap is exhausted — it is limited per day |
 | A roadmap change the platform commits | `revise_roadmap` — its preview is the exact diff; `git pull` after; a task already delivered or no longer wanted is settled, after you verify it (`references/roadmap-task.md`) |
@@ -69,7 +87,9 @@ Every write:
 | A recommendation accepted | `get_recommendation`, then `accept_recommendation` |
 | An approval decided | `decide_approval` — preview first: approving a merge gate merges its pull request, and merge gates cannot be rejected |
 
-`list_inbox` names, per row, the tool that resolves it (`resolve_with`).
+`list_inbox` names, per row, the tool that resolves it (`resolve_with`). A
+`proposal` row is decided only in the dashboard (Inbox → Proposals): point the
+user there.
 
 ## Decide: now or plan
 
@@ -185,7 +205,7 @@ or `validate.py blocker <BLK-id>`. Add `--json` for machine-readable findings
 
 ## Exit codes and the platform's rules
 
-This kit was built from AgentLoom's authoring rules `296392c225751c91922f9dfd8b007f07c51eb96d27525a7a5baf810484e9aace`
+This kit was built from AgentLoom's authoring rules `26fb4460cddc57fc1af25bd615798f8e2b85162d8cf2ef05cbf8ae186668ac7c`
 (`scripts/authoring-rules.json`, `rules_fingerprint`). Some checks depend on
 the engine the platform runs: the tech-skill pool, the `scheduling` / `tags`
 grammar, the label root. Unconfirmed against the platform, those results are

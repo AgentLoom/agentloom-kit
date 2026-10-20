@@ -23,18 +23,29 @@ act on it without rediscovering, re-reasoning, or hitting design gaps.
   environment or more than one push; never acceptance criteria.
 
 A `## References` section is welcome only when it points at real repository
-files the resolver should read, as relative Markdown links. A reference is
-inlined into the resolver's context only when its trimmed text fits both the
-32,000-character per-item cap and what remains of the 64,000-character total.
-References are decided file by file in the order files first appear — a file's
-whole-document reference before its sections — and a section is dropped when
-its whole document was inlined. A reference that does not fit becomes a pointer
-the resolver reads on demand, carrying a heading outline or a one-line hint
-while the pointer budget lasts, and consumes none of the total. So put the most
-important document first, and point at the section when a document is larger
-than the per-item cap: `doc.md#heading-slug` (or an explicit `<a id>` anchor)
-for prose, `path#L10-L20` (1-based, inclusive; `#L10` for one line) for code. A
-selector that does not resolve falls back to the whole file. Never link a path
+files the resolver should read, as relative Markdown links. The platform pins
+every reference to the revision the issue was written against, so write the
+repository path only. A reference is inlined into the resolver's context only
+when its trimmed text fits both the 32,000-character per-item cap and what
+remains of the 64,000-character total. References are decided file by file in
+the order files first appear — a file's whole-document reference before its
+sections — and a section is dropped when its whole document was inlined. A
+reference that does not fit becomes a pointer the resolver reads on demand,
+carrying a heading outline or a one-line hint while the pointer budget lasts,
+and consumes none of the total. So put the most important document first.
+
+Each entry names the section or line range the resolver needs:
+`doc.md#heading-slug` (or an explicit `<a id>` anchor) for prose,
+`path#L10-L20` (1-based, inclusive; `#L10` for one line) for code. Name a whole
+file only when it is under the per-item cap and the resolver needs all of it,
+or deliberately as a pointer. Measure every entry before proposing — the
+trimmed character count of exactly what it selects, against both caps — and
+never state that a reference fits without that measurement; the same budget
+replay runs on every proposed issue and flags an entry over the per-item cap,
+the first entry the total cap demotes, and a selector that does not resolve.
+A line range into a file that an earlier issue of the same batch rewrites stays
+a whole-file pointer: the lines will have moved by the time it runs. A selector
+that does not resolve falls back to the whole file. Never link a path
 containing `)`.
 `## Tech Skills` is described below.
 
@@ -207,4 +218,4 @@ follow-up issue that references this one by number.
 
 ---
 
-*Generated from AgentLoom's authoring rules `296392c22575`.*
+*Generated from AgentLoom's authoring rules `26fb4460cddc`.*

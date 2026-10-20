@@ -58,4 +58,4 @@ Any other `se:` label is outside the authoring scheme and is rejected.
 
 ---
 
-*Generated from AgentLoom's authoring rules `296392c22575`.*
+*Generated from AgentLoom's authoring rules `26fb4460cddc`.*

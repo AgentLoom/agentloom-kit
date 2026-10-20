@@ -715,11 +715,32 @@
       "message": "status `{status}` requires a `resolution_summary`",
       "fix": "Summarise what was decided or completed, without secret values."
     },
+    "blocker.resolution.placeholder": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`resolution_summary` `{summary}` is a placeholder, not a resolution for status `{status}`",
+      "fix": "Say what was actually decided or done — what was set up, where it lives (names, never secret values) and what was checked."
+    },
+    "blocker.resolution.too-short": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`resolution_summary` `{summary}` is shorter than {min} characters for status `{status}`",
+      "fix": "Say what was actually decided or done — what was set up, where it lives (names, never secret values) and what was checked."
+    },
+    "blocker.resolution.folded-observation": {
+      "severity": "error",
+      "pin_dependent": false,
+      "local_only": false,
+      "message": "`resolution_summary` carries an `Observed:` line",
+      "fix": "Record what the Validate check showed in `observed` (`blocker-complete.py --observed`) and keep the summary to what was done — the planner reads only `observed` as evidence the gate is met."
+    },
     "blocker.resolution.secret-assignment": {
       "severity": "error",
       "pin_dependent": false,
       "local_only": false,
-      "message": "`resolution_summary` assigns a value to the secret-labelled variable `{label}`",
+      "message": "{where} assigns a value to the secret-labelled variable `{label}`",
       "fix": "Replace the value with where it lives, or confirm it is not a secret by passing `--ack {label}`."
     },
     "blocker.resolved.invalid": {
@@ -985,10 +1006,37 @@
       "rejected",
       "completed"
     ],
+    "substantive_resolution": [
+      "agreed",
+      "completed"
+    ],
+    "placeholder_resolutions": [
+      "done",
+      "ok",
+      "okay",
+      "yes",
+      "fixed",
+      "close",
+      "closed",
+      "complete",
+      "completed",
+      "confirmed",
+      "validated",
+      "resolved",
+      "agreed",
+      "marked as complete",
+      "marked as completed",
+      "n/a"
+    ],
+    "min_resolution_chars": 12,
+    "validate_marker": "**Validate:**",
+    "bootstrap_guide_path": ".seed-engine/docs/bootstrap-guide.md",
     "completion_fields": [
       "status",
       "resolved",
-      "resolution_summary"
+      "resolution_summary",
+      "observed",
+      "observed_by"
     ],
     "status_aliases": {
       "resolved": "completed"
@@ -1072,6 +1120,10 @@
     "isoDate": {
       "source": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
       "flags": ""
+    },
+    "foldedObservation": {
+      "source": "^[ \\t]*(?:\\*\\*)?observed:",
+      "flags": "im"
     }
   },
   "secrets": {
@@ -1176,5 +1228,5 @@
       "upgrading-expo"
     ]
   },
-  "rules_fingerprint": "296392c225751c91922f9dfd8b007f07c51eb96d27525a7a5baf810484e9aace"
+  "rules_fingerprint": "26fb4460cddc57fc1af25bd615798f8e2b85162d8cf2ef05cbf8ae186668ac7c"
 }

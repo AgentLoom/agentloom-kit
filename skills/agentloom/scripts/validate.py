@@ -23,6 +23,11 @@ Filing output — `--emit-body`, the batch opening order, `batch --open` — is
 produced only when the run has no error of any kind (a provisional one
 included) and no rules mismatch; for a batch, the WHOLE batch must be clean.
 
+`issue` and `batch` also report the issue's `baseline`: `git merge-base HEAD
+origin/<default branch>`, the default-branch commit this checkout's references
+were read at. Pass it as `baseline` on the AgentLoom MCP `open_issue` call; the
+platform stamps it into the body and renders `## References` as permalinks at it.
+
 An issue draft is Markdown with front matter:
 
     ---
@@ -202,6 +207,56 @@ _ROADMAP_DOC_RULES = {
 }
 
 
+_SHA40 = re.compile(r"^[0-9a-f]{40}$")
+_GITHUB_REMOTE = re.compile(r"github\.com[:/](?P<slug>[^/\s]+/[^/\s]+?)(?:\.git)?/?$")
+
+
+def default_branch(repo_root: Path) -> str:
+    """The remote's default branch (`origin/HEAD`), falling back to `main`."""
+    code, out, _err = _kit.git(repo_root, "symbolic-ref", "--quiet", "refs/remotes/origin/HEAD")
+    prefix = "refs/remotes/origin/"
+    ref = out.strip()
+    if code == 0 and ref.startswith(prefix) and len(ref) > len(prefix):
+        return ref[len(prefix) :]
+    return "main"
+
+
+def issue_baseline(repo_root: Path) -> str | None:
+    """The revision an issue drafted in this checkout is written against.
+
+    `git merge-base HEAD origin/<default>`: an IDE author usually sits on a
+    feature branch, and the issue is resolved from the default branch, so the
+    baseline is the last default-branch commit this checkout shares. None when
+    there is no such commit (no `origin`, or unrelated histories).
+    """
+    code, out, _err = _kit.git(repo_root, "merge-base", "HEAD", f"origin/{default_branch(repo_root)}")
+    sha = out.strip().lower()
+    return sha if code == 0 and _SHA40.match(sha) else None
+
+
+def repo_slug(repo_root: Path) -> str | None:
+    """`owner/repo` of the `origin` remote when it is on github.com, else None."""
+    code, out, _err = _kit.git(repo_root, "remote", "get-url", "origin")
+    match = _GITHUB_REMOTE.search(out.strip()) if code == 0 else None
+    return match.group("slug") if match else None
+
+
+def baseline_extra(repo_root: Path) -> dict[str, Any]:
+    return {"baseline": issue_baseline(repo_root)}
+
+
+def baseline_note(baseline: str | None) -> str:
+    if baseline is None:
+        return (
+            "No baseline: this checkout shares no commit with origin's default branch. "
+            "Fetch origin, then validate again before filing."
+        )
+    return (
+        f"Baseline: {baseline} (merge-base of HEAD and origin's default branch). "
+        "Pass it as `baseline` on the AgentLoom MCP `open_issue` call."
+    )
+
+
 def references_section(body: str) -> str | None:
     """The `## References` section body, or None (the engine matches the title case-insensitively)."""
     _preamble, sections = _kit.parse_body(body)
@@ -224,7 +279,7 @@ def reference_findings(
     section = references_section(body)
     if section is None:
         return []
-    links = _selectors.extract_reference_links(section)
+    links = _selectors.extract_reference_links(section, repo_slug(repo_root))
     found = _selectors.reference_findings(
         links,
         repo_root,
@@ -255,7 +310,7 @@ def cmd_issue(args: argparse.Namespace) -> int:
     findings += path_findings(draft["body"], repo_root)
     findings += reference_findings(draft["body"], repo_root, already=findings)
     findings += duplicate_findings(draft, repo_root, Path(args.existing) if args.existing else None)
-    return finish_issue(args, draft, findings)
+    return finish_issue(args, draft, findings, baseline_extra(repo_root))
 
 
 def finish_issue(
@@ -276,6 +331,8 @@ def finish_issue(
                 lines.append(_kit.PROVISIONAL_FILING_NOTE)
     elif args.emit_body and not args.json:
         lines.append("No body written: filing needs a run with no errors and no rules mismatch.")
+    if extra is not None and "baseline" in extra and not args.json:
+        lines.append(baseline_note(extra["baseline"]))
     print("\n".join(lines))
     return code
 
@@ -297,10 +354,12 @@ def cmd_batch(args: argparse.Namespace) -> int:
     extra = {
         "order": order if allowed else [],
         "files": {item["ref"]: str(p) for item, p in zip(items, files, strict=True)},
+        **baseline_extra(repo_root),
     }
     if not args.open or not allowed:
         code = _kit.report(findings, args.fingerprint, args.json, extra)
         if not args.json:
+            print(baseline_note(extra["baseline"]))
             if allowed:
                 print("Open in this order: " + " → ".join(order))
                 if code == _kit.EXIT_PROVISIONAL:
@@ -334,7 +393,7 @@ def cmd_batch(args: argparse.Namespace) -> int:
     rendered = {"title": item["title"], "labels": item["labels"], "body": body}
     issue_findings = _kit.validate_issue(rendered, roles) + path_findings(body, repo_root)
     issue_findings += reference_findings(body, repo_root, already=issue_findings)
-    return finish_issue(args, rendered, issue_findings, {"order": order, "ref": args.open})
+    return finish_issue(args, rendered, issue_findings, {"order": order, "ref": args.open, **baseline_extra(repo_root)})
 
 
 def load_roadmap_items(text: str | None, source: str) -> list[dict[str, Any]] | None:

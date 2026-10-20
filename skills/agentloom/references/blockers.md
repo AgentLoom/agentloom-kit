@@ -25,27 +25,45 @@ Statuses only move forward.
 - `operator_action` and `other`: `pending` → `completed`
 - `upstream_request`: `pending` → `raised` → `in_discussion` → `agreed` → `rejected` → `completed`
 
-`agreed`, `rejected` and `completed` need a resolution summary.
+`agreed`, `rejected` and `completed` need a resolution summary. For
+`agreed` and `completed` it must say what was actually decided or done: a
+placeholder (`done`, `ok`, `okay`, `yes`, `fixed`, `close`, `closed`, `complete`, `completed`, `confirmed`, `validated`, `resolved`, `agreed`, `marked as complete`, `marked as completed`, `n/a`, compared case-insensitively without
+trailing punctuation) or anything under 12 characters is
+refused, because the engine's planner reads the summary as the only record of
+what happened.
 
 ## Completing a planning blocker
 
 1. Read the entry and the guide section or document its `file` names.
 2. Do the operator steps, or explain them to the user and wait until they are
    done. Run the section's `Validate:` check from a public vantage — a check
-   from inside your own network can pass while CI and resolver vantages fail.
+   from inside your own network can pass while CI and resolver vantages fail —
+   and keep what it showed.
 3. Record it:
 
    ```sh
    python3 $KIT/scripts/blocker-complete.py BLK-007 --status completed \
-     --resolution "Created the webhook secret in Secret Manager as STRIPE_WEBHOOK_SECRET."
+     --resolution "Created the webhook secret in Secret Manager as STRIPE_WEBHOOK_SECRET." \
+     --observed "gcloud secrets versions list STRIPE_WEBHOOK_SECRET showed 1 enabled version"
    ```
 
-   The script writes `status`, `resolved` and `resolution_summary` the way the
-   engine's `blocker resolve` does (and the `## Resolution` section of an
-   upstream document), after screening the summary with AgentLoom's secret
-   patterns: a credential token shape is refused outright; a secret-labelled
-   assignment (`API_KEY=…`) is refused until you confirm it with
-   `--ack API_KEY`.
+   When an `operator_action`'s guide section carries a `**Validate:**` block,
+   `completed` needs `--observed`: what the check showed, never secret values.
+   It is recorded as the entry's `observed` field (with `observed_by:
+   operator`) — the same record Mark completed and `complete_blocker` leave —
+   and the planner reads it as the evidence the gate is met; a settled entry
+   without it stays an unverified claim, so a summary carrying an `Observed:`
+   line is refused: keep the summary to what was done. The script writes `status`,
+   `resolved`, `resolution_summary` and `observed` the way the engine's
+   `blocker resolve` does (and the `## Resolution` section of an upstream
+   document), after screening the summary and the observation with
+   AgentLoom's secret patterns: a credential token shape is refused outright;
+   a secret-labelled assignment (`API_KEY=…`) is refused until you confirm it
+   with `--ack API_KEY`.
+
+   A planning blocker that a resolver round tied to an issue (`origin:
+   planning` with an `issue_number`) completes the same way, and the script
+   drops the `issue_number`, as the engine does.
 4. Review the diff, commit and push to the default branch. The push wakes
    AgentLoom, which re-plans the gated tasks.
 
@@ -56,4 +74,4 @@ To check a hand edit: `python3 $KIT/scripts/validate.py blocker BLK-007`.
 
 ---
 
-*Generated from AgentLoom's authoring rules `296392c22575`.*
+*Generated from AgentLoom's authoring rules `26fb4460cddc`.*

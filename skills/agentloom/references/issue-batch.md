@@ -80,4 +80,4 @@ ref in the order with the numbers you have.
 
 ---
 
-*Generated from AgentLoom's authoring rules `296392c22575`.*
+*Generated from AgentLoom's authoring rules `26fb4460cddc`.*

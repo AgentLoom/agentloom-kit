@@ -17,9 +17,11 @@ import json
 import re
 import subprocess  # nosec B404 - reads git objects of the local checkout only
 import sys
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from pathlib import Path
 from typing import Any
+
+from _selectors import parse_guide_pointer, validate_section_for_pointer
 
 if sys.version_info < (3, 10):  # noqa: UP036 - the guard IS the floor check
     sys.stderr.write("ERROR: the AgentLoom kit needs Python 3.10 or newer.\n")
@@ -1019,6 +1021,58 @@ def canonical_blocker_status(entry: dict[str, Any]) -> str:
     return BLOCKER["status_aliases"].get(text, text)
 
 
+def normalize_resolution(text: str) -> str:
+    """The engine's comparison form: stripped, trailing `.!?,;:` dropped, lowercased."""
+    return text.strip().rstrip(".!?,;:").strip().lower()
+
+
+def placeholder_resolution_rule(resolution: str) -> tuple[str, str] | None:
+    """`(rule id, resolution)` when a settled-as-delivered summary is a placeholder or too short (issue #2195).
+
+    The engine's `placeholder_resolution_reason` (seed-engine#407), mirrored
+    from `shared/src/constants/blocker-resolution.ts`; the caller checks the
+    status is one of `substantive_resolution`.
+    """
+    own = resolution.strip()
+    normalized = normalize_resolution(own)
+    if normalized in BLOCKER["placeholder_resolutions"]:
+        return "blocker.resolution.placeholder", own
+    if len(normalized) < BLOCKER["min_resolution_chars"]:
+        return "blocker.resolution.too-short", own
+    return None
+
+
+def resolution_before_observation(summary: str) -> str:
+    """The operator's own words: the summary before its first `Observed:` line, stripped."""
+    match = P["foldedObservation"].search(summary)
+    return (summary[: match.start()] if match else summary).strip()
+
+
+def is_resolver_origin_blocker(blk_id: str, entry: Mapping[str, Any]) -> bool:
+    """The engine's `blocker resolve` refuses this row (issue #2196).
+
+    A resolver id, `origin: resolver`, or an `int` `issue_number` (booleans
+    included, as Python counts them) on a row whose own `origin` is not
+    `planning` — the engine's own test in `blocker_resolve.py`, mirrored from
+    the platform's `isResolverOriginBlocker`. A planning row a resolver round
+    reopened settles; the engine drops its tie (seed-engine#408).
+    """
+    if blk_id.startswith(BLOCKER["resolver_id_prefix"]):
+        return True
+    origin = entry.get("origin")
+    return origin == "resolver" or (origin != "planning" and isinstance(entry.get("issue_number"), int))
+
+
+def _is_dropped_issue_tie(field: str, before: Mapping[str, Any], entry: Mapping[str, Any]) -> bool:
+    """A completion may drop the issue tie of a reopened planning row, as the engine does."""
+    return (
+        field == "issue_number"
+        and before.get("origin") == "planning"
+        and isinstance(before.get("issue_number"), int)
+        and "issue_number" not in entry
+    )
+
+
 def validate_blocker(
     blk_id: str, base: Sequence[Any], head: Sequence[Any], acknowledged: Sequence[str] = ()
 ) -> list[dict[str, Any]]:
@@ -1028,12 +1082,7 @@ def validate_blocker(
     entry = next((e for e in head_entries if e.get("id") == blk_id), None)
     if entry is None:
         return [finding("blocker.not-found", at, id=blk_id)]
-    issue_number = entry.get("issue_number")
-    if (
-        blk_id.startswith(BLOCKER["resolver_id_prefix"])
-        or entry.get("origin") == "resolver"
-        or (isinstance(issue_number, int) and not isinstance(issue_number, bool))
-    ):
+    if is_resolver_origin_blocker(blk_id, entry):
         return [finding("blocker.resolver-origin", at, id=blk_id)]
     before = next((e for e in base_entries if e.get("id") == blk_id), None)
     if before is None:
@@ -1061,26 +1110,44 @@ def validate_blocker(
     summary = entry.get("resolution_summary")
     if status in BLOCKER["resolution_required"] and (not isinstance(summary, str) or not summary.strip()):
         findings.append(finding("blocker.resolution.required", f"{at}.resolution_summary", status=status))
+    elif status in BLOCKER["substantive_resolution"] and isinstance(summary, str):
+        # The operator's own words — the part before an `Observed:` line; a
+        # summary that is nothing but an observation gets the finding below.
+        own_words = resolution_before_observation(summary)
+        reason = placeholder_resolution_rule(own_words) if own_words else None
+        if reason is not None:
+            rule_id, own = reason
+            params: dict[str, Any] = {"summary": own, "status": status}
+            if rule_id == "blocker.resolution.too-short":
+                params["min"] = BLOCKER["min_resolution_chars"]
+            findings.append(finding(rule_id, f"{at}.resolution_summary", **params))
+    # seed-engine#407: the planner reads only `observed` as evidence.
+    if isinstance(summary, str) and P["foldedObservation"].search(summary):
+        findings.append(finding("blocker.resolution.folded-observation", f"{at}.resolution_summary"))
     resolved = entry.get("resolved")
     if not isinstance(resolved, str) or not P["isoDate"].search(resolved):
         findings.append(finding("blocker.resolved.invalid", f"{at}.resolved", id=blk_id))
 
-    if isinstance(summary, str):
-        secrets = detect_secret_content(summary)
+    # Both texts the completion commits verbatim to the default branch.
+    for field in ("resolution_summary", "observed"):
+        text = entry.get(field)
+        if not isinstance(text, str):
+            continue
+        secrets = detect_secret_content(text)
         seen: set = set()
         for kind_, label, _line in secrets:
             if kind_ != "token_shape" or label in seen:
                 continue
             seen.add(label)
-            findings.append(
-                finding("secret.token-shape", f"{at}.resolution_summary", where="`resolution_summary`", pattern=label)
-            )
+            findings.append(finding("secret.token-shape", f"{at}.{field}", where=f"`{field}`", pattern=label))
         for label in labels_requiring_ack(secrets, acknowledged):
-            findings.append(finding("blocker.resolution.secret-assignment", f"{at}.resolution_summary", label=label))
+            findings.append(
+                finding("blocker.resolution.secret-assignment", f"{at}.{field}", where=f"`{field}`", label=label)
+            )
 
     completion = BLOCKER["completion_fields"]
     for field in sorted(set(before) | set(entry)):
-        if field in completion:
+        if field in completion or _is_dropped_issue_tie(field, before, entry):
             continue
         if not _same_field(before, entry, field):
             findings.append(
@@ -1388,6 +1455,28 @@ def _save_registry(path: Path, registry: dict[str, Any]) -> None:
         yaml.dump(registry, fh, default_flow_style=False, allow_unicode=True, sort_keys=False)
 
 
+def _read_guide(repo_root: Path, pointer: str) -> str | None:
+    """The guide a `file` pointer names, from the checkout (the engine's candidate order).
+
+    A pointer without a fragment, a missing file, or a path outside the
+    checkout reads as no guide — the engine skips the Validate check then too.
+    """
+    parsed = parse_guide_pointer(pointer)
+    if parsed is None:
+        return None
+    for rel in parsed["paths"]:
+        try:
+            path = contained_path(repo_root, rel)
+        except KitError:
+            continue
+        if path.is_file():
+            try:
+                return path.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                return None
+    return None
+
+
 def complete_blocker(
     repo_root: Path,
     blk_id: str,
@@ -1396,34 +1485,39 @@ def complete_blocker(
     resolved_date: str,
     acknowledged: Sequence[str] = (),
     on_refusal: Callable[[str], None] = lambda _msg: None,
+    observed: str = "",
 ) -> list[str] | None:
     """`seed-engine blocker resolve`, reproduced up to the commit.
 
     Applies the platform route's gates first (resolver-origin refusal, forward
-    transition, required resolution, secret screening) and then the engine's
-    `apply_resolution` write. Returns the repo-relative paths written, or None
-    after reporting a refusal through `on_refusal`.
+    transition, required resolution, the placeholder rule, the guide section's
+    `Validate:` observation, secret screening of the resolution and the
+    observation) and then the engine's `apply_resolution` write: `observed` —
+    what the section's `Validate:` check showed — lands on the row as
+    `observed` with `observed_by: operator` and in an upstream doc's
+    `**Observed:**` line (seed-engine#407), and a planning row a resolver round
+    tied to an issue loses that tie (seed-engine#408). Returns the
+    repo-relative paths written, or None after reporting a refusal through
+    `on_refusal`.
     """
     registry_path = contained_path(repo_root, BLOCKER["registry_path"])
-    if blk_id.startswith(BLOCKER["resolver_id_prefix"]):
-        on_refusal(
-            format_rule_text(RULES["rules"]["blocker.resolver-origin"]["message"], {"id": blk_id})
-            + ". "
-            + RULES["rules"]["blocker.resolver-origin"]["fix"]
-        )
+    resolver_origin_refusal = (
+        format_rule_text(RULES["rules"]["blocker.resolver-origin"]["message"], {"id": blk_id})
+        + ". "
+        + RULES["rules"]["blocker.resolver-origin"]["fix"]
+    )
+    # A resolver id is refused before the registry is read; the row's own
+    # origin / issue tie once it is found. One predicate decides both.
+    if is_resolver_origin_blocker(blk_id, {}):
+        on_refusal(resolver_origin_refusal)
         return None
     registry = _load_registry(registry_path)
     entry = next((e for e in registry["blockers"] if isinstance(e, dict) and e.get("id") == blk_id), None)
     if entry is None:
         on_refusal(f"`{blk_id}` is not in {BLOCKER['registry_path']}.")
         return None
-    issue_number = entry.get("issue_number")
-    if entry.get("origin") == "resolver" or (isinstance(issue_number, int) and not isinstance(issue_number, bool)):
-        on_refusal(
-            format_rule_text(RULES["rules"]["blocker.resolver-origin"]["message"], {"id": blk_id})
-            + ". "
-            + RULES["rules"]["blocker.resolver-origin"]["fix"]
-        )
+    if is_resolver_origin_blocker(blk_id, entry):
+        on_refusal(resolver_origin_refusal)
         return None
     kind = str(entry.get("kind") or "other")
     order = (
@@ -1442,17 +1536,38 @@ def complete_blocker(
     if status in BLOCKER["resolution_required"] and not resolution.strip():
         on_refusal(f"status `{status}` requires --resolution.")
         return None
-    secrets = detect_secret_content(resolution)
+    if status in BLOCKER["substantive_resolution"]:
+        placeholder = placeholder_resolution_rule(resolution)
+        if placeholder is not None:
+            rule = RULES["rules"][placeholder[0]]
+            params = {"summary": placeholder[1], "status": status, "min": BLOCKER["min_resolution_chars"]}
+            on_refusal(format_rule_text(rule["message"], params) + ". " + format_rule_text(rule["fix"], params))
+            return None
+    if P["foldedObservation"].search(resolution):
+        rule = RULES["rules"]["blocker.resolution.folded-observation"]
+        on_refusal(rule["message"] + ". " + rule["fix"])
+        return None
+    observed = observed.strip()
+    if not observed and kind == "operator_action" and status == "completed":
+        pointer = str(entry.get("file") or "")
+        section = validate_section_for_pointer(_read_guide(repo_root, pointer), pointer)
+        if section is not None:
+            on_refusal(
+                f"the guide section '{section[0]}' ({pointer}) carries a Validate: block; run it and pass what it "
+                "showed with --observed."
+            )
+            return None
+    secrets = detect_secret_content(resolution) + (detect_secret_content(observed) if observed else [])
     tokens = sorted({label for kind_, label, _l in secrets if kind_ == "token_shape"})
     if tokens:
         on_refusal(
-            f"the resolution contains a credential token shape ({', '.join(tokens)}); nothing was written. Name where the credential lives instead."
+            f"the resolution or observation contains a credential token shape ({', '.join(tokens)}); nothing was written. Name where the credential lives instead."
         )
         return None
     unacknowledged = labels_requiring_ack(secrets, acknowledged)
     if unacknowledged:
         on_refusal(
-            "the resolution assigns a value to secret-labelled variables: "
+            "the resolution or observation assigns a value to secret-labelled variables: "
             + ", ".join(unacknowledged)
             + ". Replace each value with where it lives, or confirm it is not a secret with "
             + " ".join(f"--ack {label}" for label in unacknowledged)
@@ -1471,9 +1586,15 @@ def complete_blocker(
             on_refusal(f"the `file` of `{blk_id}` is unsafe: {exc}; nothing was written.")
             return None
 
+    drop_issue_tie = entry.get("origin") == "planning" and isinstance(entry.get("issue_number"), int)
     entry["status"] = status
     entry["resolved"] = resolved_date
     entry["resolution_summary"] = resolution
+    if observed:
+        entry["observed"] = observed
+        entry["observed_by"] = "operator"
+    if drop_issue_tie:
+        entry.pop("issue_number", None)
     _save_registry(registry_path, registry)
     written = [BLOCKER["registry_path"]]
 
@@ -1481,6 +1602,8 @@ def complete_blocker(
         if doc_path.exists():
             content = doc_path.read_text(encoding="utf-8")
             block = f"**Status:** {status}\n**Date:** {resolved_date}\n**Summary:** {resolution}"
+            if observed:
+                block += f"\n**Observed:** {observed}"
             patched = re.sub(r"(## Resolution\n+)_Pending_", lambda m: m.group(1) + block, content, count=1)
             if patched == content:
                 patched = content.rstrip() + "\n\n## Resolution\n\n" + block + "\n"

@@ -85,6 +85,7 @@ Every write:
 | A manual blocker recorded | `complete_blocker` (instead of `blocker-complete.py`) |
 | A resolver's questions answered | `respond_to_blocker` — its preview returns the questions and the revision to answer |
 | A recommendation accepted | `get_recommendation`, then `accept_recommendation` |
+| A recommendation rejected | `get_recommendation`, then `reject_recommendation` with an optional `reason` — preview first: one whose proposal someone already acted on cannot be rejected |
 | An approval decided | `decide_approval` — preview first: approving a merge gate merges its pull request, and merge gates cannot be rejected |
 
 `list_inbox` names, per row, the tool that resolves it (`resolve_with`). A

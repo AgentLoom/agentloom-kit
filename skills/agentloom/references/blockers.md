@@ -74,4 +74,4 @@ To check a hand edit: `python3 $KIT/scripts/validate.py blocker BLK-007`.
 
 ---
 
-*Generated from AgentLoom's authoring rules `26fb4460cddc`.*
+*Generated from AgentLoom's authoring rules `b1cfb5d7a075`.*

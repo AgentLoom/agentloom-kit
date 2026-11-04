@@ -3,7 +3,7 @@ name: agentloom
 description: File work for AgentLoom correctly from the IDE — resolver-ready GitHub issues, dependency-ordered issue batches, roadmap tasks in .seed-engine/roadmap.yml, and manual-blocker resolutions — checked by a deterministic validator before anything is filed or pushed. Use when the user asks to file, queue, plan or hand work to AgentLoom or Seed-Engine, to put something on the roadmap, to pin or park a roadmap task, to complete a BLK-* blocker, or to check a hand-written issue or roadmap edit before pushing.
 compatibility: Needs Python 3.10+ with PyYAML and ruamel.yaml, git, and the GitHub CLI (gh) for filing issues. Works offline with no AgentLoom credentials; the optional AgentLoom MCP server adds the live authoring context and your user id.
 metadata:
-  built_for_rules_fingerprint: "26fb4460cddc57fc1af25bd615798f8e2b85162d8cf2ef05cbf8ae186668ac7c"
+  built_for_rules_fingerprint: "b1cfb5d7a0752596ab06ba40198d8abf2a110689b4c095f9680ac3a2cef56e88"
 ---
 
 # AgentLoom
@@ -79,11 +79,14 @@ Every write:
 | The user wants | Tool |
 |---|---|
 | File without `gh` or a checkout | `open_issue`, or `open_issue_batch` for 2–10 linked issues — the platform checks, labels and stamps them; `scheduling: "parked"` files one that must not start yet (`references/labels.md`). From a checkout, pass the `baseline` that `validate.py issue` prints on `open_issue`: the platform pins the issue's `## References` at that commit |
+| File it and have the engine review it before anything starts | `open_issue_reviewed` — the same draft as `open_issue`; it files the issue parked and starts the reviewed onboarding in one call. The platform removes the park when the review converges and leaves it parked otherwise; follow the loop with `get_issue_status` |
+| An existing issue reviewed | `review_issue` — a sprint-published issue gets a read-only `issue_review` that comments; a plain one gets the reviewed onboarding. Its preview names the backend and refuses an issue already reviewed, parked on an operator, or with a run in flight |
+| A Jira ticket pulled in ("onboard APPSEC-219") | `onboard_ticket` with the `ticket_key` — the planning scope whose project matches the key places it in a repository; the platform files and binds the issue with the user as requester and starts its preview run, which approvers see in the Inbox. Its preview names the scope, the repository and whether the ticket is already bound; a bound ticket returns its issue instead of a second one. A key no scope covers, or a scope that cannot place a repository, is refused with the reason |
 | "Run it now" | `dispatch_run` on the issue |
 | A stopped run going again | `get_run_failure`, then `steer_run` (read `references/steer-guidance.md` first) or `resume_run`; `reset_cap: true` only when the run's cap is exhausted — it is limited per day |
 | A roadmap change the platform commits | `revise_roadmap` — its preview is the exact diff; `git pull` after; a task already delivered or no longer wanted is settled, after you verify it (`references/roadmap-task.md`) |
 | A manual blocker recorded | `complete_blocker` (instead of `blocker-complete.py`) |
-| A resolver's questions answered | `respond_to_blocker` — its preview returns the questions and the revision to answer |
+| A resolver's or an onboarding's questions answered | `respond_to_blocker` — its preview returns the questions and the revision to answer; an onboarding's (`family: "onboard"`) are next when `get_issue_status` shows its `onboard` run waiting with questions |
 | A recommendation accepted | `get_recommendation`, then `accept_recommendation` |
 | A recommendation rejected | `get_recommendation`, then `reject_recommendation` with an optional `reason` — preview first: one whose proposal someone already acted on cannot be rejected |
 | An approval decided | `decide_approval` — preview first: approving a merge gate merges its pull request, and merge gates cannot be rejected |
@@ -206,7 +209,7 @@ or `validate.py blocker <BLK-id>`. Add `--json` for machine-readable findings
 
 ## Exit codes and the platform's rules
 
-This kit was built from AgentLoom's authoring rules `26fb4460cddc57fc1af25bd615798f8e2b85162d8cf2ef05cbf8ae186668ac7c`
+This kit was built from AgentLoom's authoring rules `b1cfb5d7a0752596ab06ba40198d8abf2a110689b4c095f9680ac3a2cef56e88`
 (`scripts/authoring-rules.json`, `rules_fingerprint`). Some checks depend on
 the engine the platform runs: the tech-skill pool, the `scheduling` / `tags`
 grammar, the label root. Unconfirmed against the platform, those results are

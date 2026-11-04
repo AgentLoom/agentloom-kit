@@ -258,14 +258,14 @@
       "pin_dependent": true,
       "local_only": false,
       "message": "no `{prefix}<role>` label",
-      "fix": "Add one or two resolver roles from `.seed-engine/org-chart.yml`, primary role first."
+      "fix": "Add resolver roles from `.seed-engine/org-chart.yml`, primary role first, within the repository's cap."
     },
     "issue.labels.resolve-worker-too-many": {
       "severity": "error",
       "pin_dependent": true,
       "local_only": false,
       "message": "{count} resolve-worker labels; at most {max}",
-      "fix": "Keep role assignment conservative: the primary role, plus one more only when the work truly spans both."
+      "fix": "Keep role assignment conservative: the primary role, plus another only when the work truly spans it."
     },
     "issue.labels.unknown-role": {
       "severity": "error",
@@ -787,9 +787,10 @@
       "se:needs-attention",
       "se:already-resolved",
       "se:verified",
-      "se:claude-md-refresh"
+      "se:claude-md-refresh",
+      "se:issue-reviewed"
     ],
-    "max_resolve_workers": 2,
+    "max_resolve_workers": 3,
     "provenance": "agentloom:user-generated"
   },
   "issue": {
@@ -909,9 +910,14 @@
     "origin": {
       "key": "agentloom-origin",
       "source": "ide",
+      "ticket_source": "ticket",
+      "connector_key": "connector",
+      "ticket_key_key": "key",
       "requested_by_key": "requested-by",
       "marker": "<!-- agentloom-origin: ide -->",
-      "marker_with_user": "<!-- agentloom-origin: ide; requested-by: <uuid> -->"
+      "marker_with_user": "<!-- agentloom-origin: ide; requested-by: <uuid> -->",
+      "ticket_marker": "<!-- agentloom-origin: ticket; connector: <type>; key: <ticket key> -->",
+      "ticket_marker_with_user": "<!-- agentloom-origin: ticket; connector: <type>; key: <ticket key>; requested-by: <uuid> -->"
     }
   },
   "roadmap": {
@@ -951,7 +957,8 @@
       "source_repo",
       "settled_by",
       "settled_run",
-      "settle_evidence"
+      "settle_evidence",
+      "source_issue"
     ],
     "disposition_fields": [
       "scheduling",
@@ -1093,6 +1100,14 @@
       "source": "<!--\\s*agentloom-origin:([^>]*?)-->",
       "flags": ""
     },
+    "originConnector": {
+      "source": "^[a-z][a-z0-9_]*$",
+      "flags": ""
+    },
+    "originTicketKey": {
+      "source": "^[A-Za-z0-9][A-Za-z0-9_.-]*$",
+      "flags": ""
+    },
     "techSkillItem": {
       "source": "^[-*]\\s+`([^`]+)`\\s*$",
       "flags": ""
@@ -1228,5 +1243,9 @@
       "upgrading-expo"
     ]
   },
-  "rules_fingerprint": "26fb4460cddc57fc1af25bd615798f8e2b85162d8cf2ef05cbf8ae186668ac7c"
+  "references": {
+    "inline_item_max_chars": 32000,
+    "inline_total_max_chars": 64000
+  },
+  "rules_fingerprint": "b1cfb5d7a0752596ab06ba40198d8abf2a110689b4c095f9680ac3a2cef56e88"
 }

@@ -53,10 +53,15 @@ containing `)`.
 
 - **Goal** — what the change delivers and why now.
 - **Background** — enough context for a resolver to act without re-reading the
-  whole codebase (cite the files/areas you found while investigating).
-- **Scope** — the intended execution boundary; what's in and what's out.
-- **Implementation Notes** — likely technical approach, constraints, sequencing,
-  integration concerns. For a bug, include the root cause and the file:line you
+  whole codebase: the files and areas you found while investigating, the
+  measured evidence, and the governing design document when one exists.
+- **Scope** — the intended execution boundary: what is in, what is out, and
+  where the adjacent work deliberately excluded is tracked. Say when fixing
+  only half of a defect leaves it alive.
+- **Implementation Notes** — the technical approach as numbered steps naming
+  real symbols: the function to change, the predicate that already exists, the
+  vocabulary member to add, the test that pins the behaviour. Say what must not
+  change and why. For a bug, include the root cause and the file:line you
   located.
 - **Acceptance Criteria** — a testable/reviewable checklist, every item
   satisfiable by **one resolver round**: one commit and one push, judged on the
@@ -64,27 +69,46 @@ containing `)`.
   CI sequence. Write a proof that the change can fail as a test, or give an
   alternative the resolver can meet ("or an equivalent documented check"); a
   check that genuinely needs an operator goes in `## Manual Verification`.
+- Never narrow a criterion by dropping its stated alternative. When the source
+  says "a deliberate red run **or an equivalent documented check**", carry both
+  halves; keeping only the half no round can perform turns an achievable
+  criterion into an unsatisfiable one, and the resolver has no channel to
+  repair it (an acceptance criterion is never a blocker).
+- Decide; do not defer. State a design decision with its reason and the
+  alternatives rejected, never as "investigate whether …" or "decide between …"
+  for the resolver. An issue with an open design question is not ready.
 - Never instruct the resolver to hand-author a `BLK-*` guide anchor, add a
   blocker-registry row, or otherwise edit blocker planes as an acceptance
   criterion. Planning blockers belong in roadmap `manual_blockers`; a resolver
   reports newly discovered blockers through its typed episode/deferral output,
   and Seed Engine stamps anchors itself.
+- Never write an issue that anticipates its own block. "If the external answer
+  / consent / enablement has not arrived, deliver the preparation and raise the
+  dependency through the blocker channel" is forbidden: a known external gate
+  is settled before the issue is written; the blocker channel is for gates
+  discovered during resolution.
 - Never write scope or acceptance criteria that require editing a **connected
   repository** — a peer declared under `reference_trees.peers` or a submodule.
   Those trees are read-only to the resolver; it hands such
-  work off as a targeted deferred-work record instead. Name the peer
-  dependency in **Scope** or **Implementation Notes** as `<owner/repo>: <what
-  must change>` so the resolver knows to hand it off, and keep this issue's
-  acceptance criteria satisfiable inside this repository (an inert-safe change
-  — deprecated alias kept, new path dormant until the peer adopts it).
+  work off as a targeted deferred-work record instead. State the peer
+  dependency under **Scope** as out of scope for this repository, as
+  `<owner/repo>: <what must change>`, so the resolver knows to hand it off, and
+  keep this issue's acceptance criteria satisfiable inside this repository (an
+  inert-safe change — deprecated alias kept, new path dormant until the peer
+  adopts it).
+- Risks and Open Questions are for genuine unknowns that do not block the
+  design. A question whose answer changes the design is a decision to take
+  before the issue is ready, not an open question.
 
 ## Quality bar
 
 - Detailed and useful to both humans and a future Claude Code resolver run.
-- Explicit about the goal, constraints, likely implementation space, and
-  acceptance criteria.
+- Explicit about the goal, constraints, likely implementation space, risks,
+  open questions and acceptance criteria.
 - Names the alternatives you rejected and why, so the resolver does not
   reopen them.
+- Self-contained: nothing the resolver needs lives only in a chat, a thread or
+  a person's head.
 - Free of meta narration about your own process.
 - Implementation-ready, not a thin summary — as if authored by a strong human
   contributor.
@@ -218,4 +242,4 @@ follow-up issue that references this one by number.
 
 ---
 
-*Generated from AgentLoom's authoring rules `26fb4460cddc`.*
+*Generated from AgentLoom's authoring rules `b1cfb5d7a075`.*

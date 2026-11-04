@@ -371,8 +371,9 @@ def _title_findings(title: str, prefix: str) -> list[dict[str, Any]]:
 
 
 def _label_findings(
-    labels: Sequence[str], roles: Sequence[str] | None, prefix: str
+    labels: Sequence[str], roles: Sequence[str] | None, prefix: str, max_workers: int | None = None
 ) -> tuple[list[dict[str, Any]], str | None]:
+    cap = max_workers if max_workers is not None else LABELS["max_resolve_workers"]
     findings: list[dict[str, Any]] = []
     trimmed = [label.strip() for label in labels]
     types: list[str] = []
@@ -425,10 +426,8 @@ def _label_findings(
         findings.append(finding("issue.labels.priority-multiple", path, prefix=LABELS["priority_prefix"]))
     if not workers:
         findings.append(finding("issue.labels.resolve-worker-missing", path, prefix=LABELS["resolve_worker_prefix"]))
-    elif len(workers) > LABELS["max_resolve_workers"]:
-        findings.append(
-            finding("issue.labels.resolve-worker-too-many", path, count=len(workers), max=LABELS["max_resolve_workers"])
-        )
+    elif len(workers) > cap:
+        findings.append(finding("issue.labels.resolve-worker-too-many", path, count=len(workers), max=cap))
     if LABELS["provenance"] not in trimmed:
         findings.append(finding("issue.labels.provenance-missing", path, label=LABELS["provenance"]))
     issue_type = types[0] if len(types) == 1 and types[0] in ISSUE["types"] else None
@@ -491,21 +490,57 @@ def _marker_findings(body: str, path: str, in_batch: bool) -> list[dict[str, Any
     origin = ISSUE["origin"]
     params = {"marker": origin["marker"], "marker_with_user": origin["marker_with_user"]}
     origins = list(P["originMarker"].finditer(text))
-    requested_prefix = f"{origin['requested_by_key']}:"
     if not origins:
         findings.append(finding("issue.provenance.marker-missing", path, **params))
     elif len(origins) > 1:
         findings.append(finding("issue.provenance.marker-malformed", path, **params))
     else:
-        parts = [p.strip() for p in origins[0].group(1).split(";")]
-        if parts[0] != origin["source"] or len(parts) > 2:
+        verdict = _origin_line_verdict(origins[0].group(1))
+        if verdict == "malformed":
             findings.append(finding("issue.provenance.marker-malformed", path, **params))
-        elif len(parts) == 2:
-            if not parts[1].startswith(requested_prefix):
-                findings.append(finding("issue.provenance.marker-malformed", path, **params))
-            elif not P["uuid"].search(parts[1][len(requested_prefix) :].strip()):
-                findings.append(finding("issue.provenance.requested-by-not-uuid", path))
+        elif verdict == "requested-by-not-uuid":
+            findings.append(finding("issue.provenance.requested-by-not-uuid", path))
     return findings
+
+
+def _origin_field(part: str | None, name: str) -> str | None:
+    """The trimmed value of a `<name>: <value>` origin part, or None when the part is another field."""
+    prefix = f"{name}:"
+    return part[len(prefix) :].strip() if part is not None and part.startswith(prefix) else None
+
+
+def _origin_line_verdict(inner: str) -> str:
+    """Judge the inside of an origin line: `ok`, `malformed` or `requested-by-not-uuid`.
+
+    Two forms are accepted: `ide[; requested-by: <uuid>]` and the platform's
+    `ticket; connector: <type>; key: <ticket key>[; requested-by: <uuid>]`.
+    A `requested-by` part is a uuid or absent, never empty.
+    """
+    origin = ISSUE["origin"]
+    parts = [p.strip() for p in inner.split(";")]
+    if parts[0] == origin["source"]:
+        rest = parts[1:]
+    elif parts[0] == origin["ticket_source"]:
+        connector = _origin_field(parts[1] if len(parts) > 1 else None, origin["connector_key"])
+        key = _origin_field(parts[2] if len(parts) > 2 else None, origin["ticket_key_key"])
+        if (
+            connector is None
+            or key is None
+            or not P["originConnector"].search(connector)
+            or not P["originTicketKey"].search(key)
+        ):
+            return "malformed"
+        rest = parts[3:]
+    else:
+        return "malformed"
+    if not rest:
+        return "ok"
+    if len(rest) > 1:
+        return "malformed"
+    requester = _origin_field(rest[0], origin["requested_by_key"])
+    if requester is None:
+        return "malformed"
+    return "ok" if P["uuid"].search(requester) else "requested-by-not-uuid"
 
 
 def _tech_skill_findings(
@@ -596,10 +631,15 @@ def unachievable_criteria(section: str) -> list[str]:
 
 
 def _validate_draft(
-    draft: dict[str, Any], roles: Sequence[str] | None, pool: Sequence[str], prefix: str, in_batch: bool
+    draft: dict[str, Any],
+    roles: Sequence[str] | None,
+    pool: Sequence[str],
+    prefix: str,
+    in_batch: bool,
+    max_workers: int | None = None,
 ) -> list[dict[str, Any]]:
     body_path = f"{prefix}body"
-    label_findings, issue_type = _label_findings(draft["labels"], roles, prefix)
+    label_findings, issue_type = _label_findings(draft["labels"], roles, prefix, max_workers)
     parsed = parse_body(draft["body"])
     return [
         *_title_findings(draft["title"], prefix),
@@ -614,9 +654,13 @@ def _validate_draft(
 
 
 def validate_issue(
-    draft: dict[str, Any], roles: Sequence[str] | None = None, pool: Sequence[str] = POOL
+    draft: dict[str, Any],
+    roles: Sequence[str] | None = None,
+    pool: Sequence[str] = POOL,
+    max_workers: int | None = None,
 ) -> list[dict[str, Any]]:
-    return _validate_draft(draft, roles, pool, "", False)
+    """`max_workers` is the repository's resolver-role cap; None uses the default."""
+    return _validate_draft(draft, roles, pool, "", False, max_workers)
 
 
 def topo_order(items: Sequence[dict[str, Any]]) -> list[str]:
@@ -640,7 +684,10 @@ def topo_order(items: Sequence[dict[str, Any]]) -> list[str]:
 
 
 def validate_batch(
-    items: Sequence[dict[str, Any]], roles: Sequence[str] | None = None, pool: Sequence[str] = POOL
+    items: Sequence[dict[str, Any]],
+    roles: Sequence[str] | None = None,
+    pool: Sequence[str] = POOL,
+    max_workers: int | None = None,
 ) -> tuple[list[dict[str, Any]], list[str]]:
     if not items:
         return [finding("batch.empty", "items")], []
@@ -679,7 +726,7 @@ def validate_batch(
                 findings.append(finding("batch.depends-on.cycle", "items", cycle=" → ".join(cycle)))
                 break
     for i, item in enumerate(items):
-        findings.extend(_validate_draft(item, roles, pool, f"items[{i}].", True))
+        findings.extend(_validate_draft(item, roles, pool, f"items[{i}].", True, max_workers))
     return findings, topo_order(items)
 
 
@@ -1284,6 +1331,7 @@ def load_context(path: Path) -> dict[str, Any]:
     `rules_fingerprint` identifies the platform's authoring rules (absent from
     an older server, which leaves the run provisional), its `roles` the resolver roles of the repository's
     org chart on the default branch (null when the platform could not read it),
+    its `labels.max_resolve_workers` the repository's resolver-role cap,
     and its `user_id` the connected member's uuid for provenance — null when the
     agent connected with an org's headless token, whose work carries no
     requester.
@@ -1309,6 +1357,12 @@ def load_context(path: Path) -> dict[str, Any]:
         raise KitError(f"--context {path} carries no AgentLoom user uuid (nor null, for a headless token)")
     if roles is not None and not (is_string_list(roles) and roles):
         raise KitError(f"--context {path}: roles must be a non-empty list of role keys, or null")
+    labels = data.get("labels")
+    if labels is not None and not isinstance(labels, dict):
+        raise KitError(f"--context {path}: labels must be an object when present")
+    cap = labels.get("max_resolve_workers") if isinstance(labels, dict) else None
+    if cap is not None and (isinstance(cap, bool) or not isinstance(cap, int) or cap <= 0):
+        raise KitError(f"--context {path}: labels.max_resolve_workers must be a positive integer when present")
     return data
 
 
@@ -1332,6 +1386,13 @@ def authoring_roles(repo_root: Path, context: dict[str, Any] | None, required: b
     if context is not None and context.get("roles") is not None:
         return [str(r) for r in context["roles"]]
     return org_chart_roles(repo_root, required=required)
+
+
+def authoring_max_workers(context: dict[str, Any] | None) -> int | None:
+    """The repository's resolver-role cap from the live context, else None (the rules' default)."""
+    labels = context.get("labels") if context is not None else None
+    cap = labels.get("max_resolve_workers") if isinstance(labels, dict) else None
+    return cap if isinstance(cap, int) and not isinstance(cap, bool) and cap > 0 else None
 
 
 def contained_path(repo_root: Path, rel: str) -> Path:

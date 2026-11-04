@@ -10,7 +10,7 @@ change them later.
 | `se` | 1 | The engine only selects issues that carry it. |
 | `se:type:<type>` | 1 | `security` · `bugfix` · `feature` · `refactor` · `dependency` · `docs` · `chore` · `test` · `other` |
 | `se:priority:<priority>` | 1 | `low` · `medium` · `high` |
-| `se:resolve-worker:<role>` | 1–2 | Role keys from `.seed-engine/org-chart.yml` (`roles[].key`), primary role first. Keep assignment conservative. |
+| `se:resolve-worker:<role>` | 1–3 | Role keys from `.seed-engine/org-chart.yml` (`roles[].key`), primary role first. Keep assignment conservative. The cap is the repository's `workflows.issue_generator.max_roles_per_issue` (the live context's `labels.max_resolve_workers`); 3 when unset. |
 | `agentloom:user-generated` | 1 | Marks agent-authored work for AgentLoom; outside the engine's label plane. |
 | `se:parked` or `se:pinned` | 0–1 | Scheduling — the dashboard's Park and Pin. Parked: the backlog leaves the issue alone until the label is removed (an explicit Start run still runs it). Pinned: the backlog takes it first. |
 
@@ -53,9 +53,10 @@ a hand-applied one makes it skip or misread the issue.
 - `se:already-resolved`
 - `se:verified`
 - `se:claude-md-refresh`
+- `se:issue-reviewed`
 
 Any other `se:` label is outside the authoring scheme and is rejected.
 
 ---
 
-*Generated from AgentLoom's authoring rules `26fb4460cddc`.*
+*Generated from AgentLoom's authoring rules `b1cfb5d7a075`.*

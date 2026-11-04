@@ -45,4 +45,4 @@ new `request_id`, reusing that `request_id` if you have to retry.
 
 ---
 
-*Generated from AgentLoom's authoring rules `26fb4460cddc`.*
+*Generated from AgentLoom's authoring rules `b1cfb5d7a075`.*

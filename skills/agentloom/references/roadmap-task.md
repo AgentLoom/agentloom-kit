@@ -38,9 +38,10 @@ Quote any value that contains ` #` or `: ` (`'…'` or `"…"`): unquoted, YAML
 reads ` #` as a comment and silently drops the rest (`title: … (issue #12)` is
 stored as `… (issue`).
 
-**Engine-owned — never write them:** `status` (beyond `planned` on a new task), `created_by`, `created_at`, `triaged`, `sprint_ref`, `issue_ref`, `planned_at`, `completed_at`, `deferred_from`, `source_repo`, `settled_by`, `settled_run`, `settle_evidence`. A task another
-repository handed over carries `deferred_from` / `source_repo`; preserve those
-exactly as read.
+**Engine-owned — never write them:** `status` (beyond `planned` on a new task), `created_by`, `created_at`, `triaged`, `sprint_ref`, `issue_ref`, `planned_at`, `completed_at`, `deferred_from`, `source_repo`, `settled_by`, `settled_run`, `settle_evidence`, `source_issue`. A task another
+repository handed over carries `deferred_from` / `source_repo`, and a follow-up
+task the engine's triager filed at closeout carries `source_issue`; preserve
+those exactly as read.
 
 **Choosing `tech_skills`.** **Default to `[]`**, but tag **every** clear match — the field is a list, and each id stages a skill the resolver otherwise works without; "the description already implies that work" is not a reason to omit its skill. **Check the roadmap's precedent first**: how completed tasks of the same shape are tagged is the strongest signal (e.g. UI tasks whose verification bar is browser-driven pair `frontend-design` with `playwright-cli` when the repo has a Playwright harness). **Never** invent ids from the repo's org-chart roles or `.claude/skills/` dirs (e.g. `backend-platform`, `web-frontend`): those are role skills, silently invalid as `tech_skills`.
 
@@ -131,4 +132,4 @@ New run → Generate backlog → tag scope `user-generated`.
 
 ---
 
-*Generated from AgentLoom's authoring rules `26fb4460cddc`.*
+*Generated from AgentLoom's authoring rules `b1cfb5d7a075`.*

@@ -306,7 +306,11 @@ def gh_command(title: str, labels: Sequence[str], body_path: Path) -> str:
 def cmd_issue(args: argparse.Namespace) -> int:
     repo_root = Path(args.repo_root)
     draft = load_draft(Path(args.file), batch=False)
-    findings = _kit.validate_issue(draft, _kit.authoring_roles(repo_root, args.context, required=True))
+    findings = _kit.validate_issue(
+        draft,
+        _kit.authoring_roles(repo_root, args.context, required=True),
+        max_workers=_kit.authoring_max_workers(args.context),
+    )
     findings += path_findings(draft["body"], repo_root)
     findings += reference_findings(draft["body"], repo_root, already=findings)
     findings += duplicate_findings(draft, repo_root, Path(args.existing) if args.existing else None)
@@ -343,7 +347,8 @@ def cmd_batch(args: argparse.Namespace) -> int:
     files = sorted(p for p in directory.glob("*.md") if not p.name.endswith(".body.md"))
     items = [load_draft(p, batch=True) for p in files]
     roles = _kit.authoring_roles(repo_root, args.context, required=True)
-    findings, order = _kit.validate_batch(items, roles)
+    max_workers = _kit.authoring_max_workers(args.context)
+    findings, order = _kit.validate_batch(items, roles, max_workers=max_workers)
     for i, item in enumerate(items):
         findings += path_findings(item["body"], repo_root, f"items[{i}].")
         findings += reference_findings(item["body"], repo_root, f"items[{i}].", already=findings)
@@ -391,7 +396,7 @@ def cmd_batch(args: argparse.Namespace) -> int:
     if deps:
         body = f"<!-- {_kit.ISSUE['depends_on_marker']}: {', '.join(str(n) for n in deps)} -->\n{body}"
     rendered = {"title": item["title"], "labels": item["labels"], "body": body}
-    issue_findings = _kit.validate_issue(rendered, roles) + path_findings(body, repo_root)
+    issue_findings = _kit.validate_issue(rendered, roles, max_workers=max_workers) + path_findings(body, repo_root)
     issue_findings += reference_findings(body, repo_root, already=issue_findings)
     return finish_issue(args, rendered, issue_findings, {"order": order, "ref": args.open, **baseline_extra(repo_root)})
 

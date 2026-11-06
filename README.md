@@ -8,7 +8,7 @@ resolutions, checked by a deterministic validator before anything is filed or
 pushed. Your agent files with your own `gh` and `git`; no AgentLoom credentials
 are needed.
 
-Kit version **`2026.11.3`**, built from AgentLoom's authoring rules
+Kit version **`2026.11.5.1`**, built from AgentLoom's authoring rules
 `b1cfb5d7a0752596ab06ba40198d8abf2a110689b4c095f9680ac3a2cef56e88`. The kit's release tag equals the kit version: the date
 of the change (`YYYY.M.D`, or `YYYY.M.D.N` for a second release that day). The
 kit is tied to the rules it enforces, not to an engine pin: an engine upgrade
@@ -76,7 +76,10 @@ an older kit stops filing until it is updated.
   claude plugin update agentloom@agentloom-kit
   ```
 
-  Then start a new session.
+  An update, by hand or automatic, does not reach a session already running:
+  it keeps the skill it loaded. Run `/reload-plugins` or start a new session,
+  and ask the agent to re-read the skill. The AgentLoom server names the
+  current kit version, so a connected agent on an older kit tells you when.
 - **Cursor:** update the plugin from **Customize**, or `git pull` in your
   clone and reload Cursor.
 - **A copied skill:** copy `skills/agentloom/` again from the new release.

@@ -325,7 +325,9 @@ def finish_issue(
 ) -> int:
     lines: list[str] = []
     allowed = _kit.filing_allowed(findings, args.fingerprint)
-    code = _kit.report(findings, args.fingerprint, args.json, extra, emit=lines.append)
+    code = _kit.report(
+        findings, args.fingerprint, args.json, extra, emit=lines.append, current_kit_version=args.kit_version
+    )
     if args.emit_body and allowed:
         out = Path(args.emit_body)
         out.write_text(draft["body"], encoding="utf-8")
@@ -362,7 +364,7 @@ def cmd_batch(args: argparse.Namespace) -> int:
         **baseline_extra(repo_root),
     }
     if not args.open or not allowed:
-        code = _kit.report(findings, args.fingerprint, args.json, extra)
+        code = _kit.report(findings, args.fingerprint, args.json, extra, current_kit_version=args.kit_version)
         if not args.json:
             print(baseline_note(extra["baseline"]))
             if allowed:
@@ -425,6 +427,7 @@ def cmd_roadmap(args: argparse.Namespace) -> int:
             [_kit.finding("roadmap.parse", "roadmap", file=_kit.ROADMAP_PATH, detail=str(exc))],
             args.fingerprint,
             args.json,
+            current_kit_version=args.kit_version,
         )
     findings = _kit.validate_roadmap(base, head, _kit.authoring_roles(repo_root, args.context), placement=placement)
     base_ids = {_kit.roadmap_item_id(i) for i in base or []}
@@ -446,7 +449,7 @@ def cmd_roadmap(args: argparse.Namespace) -> int:
         )
     if not args.json:
         print(f"Compared {_kit.ROADMAP_PATH} against {base_ref}.")
-    return _kit.report(findings, args.fingerprint, args.json, {"base": base_ref})
+    return _kit.report(findings, args.fingerprint, args.json, {"base": base_ref}, current_kit_version=args.kit_version)
 
 
 def cmd_blocker(args: argparse.Namespace) -> int:
@@ -468,11 +471,12 @@ def cmd_blocker(args: argparse.Namespace) -> int:
             [_kit.finding("blocker.registry.parse", "blockers", file=registry, detail=str(exc))],
             args.fingerprint,
             args.json,
+            current_kit_version=args.kit_version,
         )
     findings = _kit.validate_blocker(args.id, base, head, args.ack or [])
     if not args.json:
         print(f"Compared {registry} against {base_ref}.")
-    return _kit.report(findings, args.fingerprint, args.json, {"base": base_ref})
+    return _kit.report(findings, args.fingerprint, args.json, {"base": base_ref}, current_kit_version=args.kit_version)
 
 
 def main(argv: Sequence[str]) -> int:
@@ -490,7 +494,7 @@ def main(argv: Sequence[str]) -> int:
     common.add_argument(
         "--context",
         default=None,
-        help="saved get_authoring_context result (live rules fingerprint and roles, when connected)",
+        help="saved get_authoring_context result (live rules fingerprint, roles and current kit version, when connected)",
     )
     common.add_argument("--json", action="store_true", help="machine-readable output")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -526,6 +530,7 @@ def main(argv: Sequence[str]) -> int:
     try:
         args.context = _kit.load_context(Path(args.context)) if args.context else None
         args.fingerprint = _kit.context_fingerprint(args.fingerprint, args.context)
+        args.kit_version = _kit.context_kit_version(args.context)
         return int(args.func(args))
     except (_kit.KitError, ValueError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)

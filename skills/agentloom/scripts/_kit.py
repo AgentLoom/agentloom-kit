@@ -115,11 +115,20 @@ POOL: list[str] = list(RULES["tech_skills"]["ids"])
 # document (`authoringRulesFingerprint` in @agentloom/shared). The kit carries
 # no engine pin — a pin bump that changes no rule leaves the kit unchanged.
 BUILT_FOR_RULES_FINGERPRINT: str = RULES["rules_fingerprint"]
-# How to update, named wherever the kit reports itself out of date.
+# This kit's own release version (`kit/src/VERSION`, stamped at build). Not
+# part of the rules fingerprint: a version difference alone is a notice, never
+# a reason to refuse filing.
+_STAMPED_KIT_VERSION = RULES.get("kit_version")
+KIT_VERSION: str | None = _STAMPED_KIT_VERSION if isinstance(_STAMPED_KIT_VERSION, str) else None
+# How to update, named wherever the kit reports itself out of date. A running
+# session keeps the skill it loaded, so the steps end with a reload and a
+# re-read, not just the update.
 UPDATE_HINT = (
     "Claude Code: `claude plugin marketplace update agentloom-kit`, then "
-    "`claude plugin update agentloom@agentloom-kit` and a new session; "
-    "other clients: the kit README's Update section"
+    "`claude plugin update agentloom@agentloom-kit`, then `/reload-plugins` or a new session, "
+    "and re-read this skill. To stay current, turn on auto-update: "
+    "`/plugin` → Marketplaces → agentloom-kit → Enable auto-update. "
+    "Other clients: the kit README's Update section"
 )
 
 
@@ -1381,6 +1390,49 @@ def context_fingerprint(fingerprint: str | None, context: dict[str, Any] | None)
     return live if live is not None else fingerprint
 
 
+def context_kit_version(context: dict[str, Any] | None) -> str | None:
+    """The current kit version the live context names (`kit_version`), or
+    None offline or from an older server that does not serve one."""
+    if context is None:
+        return None
+    raw = context.get("kit_version")
+    return raw.strip() if isinstance(raw, str) and raw.strip() else None
+
+
+_KIT_VERSION_SHAPE = re.compile(r"\A\d+(?:\.\d+)*\Z", re.ASCII)
+
+
+def kit_version_parts(version: str | None) -> tuple[int, ...] | None:
+    """A kit version (`YYYY.M.D` or `YYYY.M.D.N`) as integer parts, or None
+    when it does not parse."""
+    if not isinstance(version, str) or not _KIT_VERSION_SHAPE.match(version.strip()):
+        return None
+    return tuple(int(part) for part in version.strip().split("."))
+
+
+def kit_is_older(current: str | None) -> bool:
+    """Whether the platform's current kit version is newer than this kit's,
+    compared part by part as integers (a missing part is 0). False when either
+    side is absent or does not parse, and for a kit newer than the platform —
+    a traffic-only rollback produces exactly that, and the kit is not at fault."""
+    mine, theirs = kit_version_parts(KIT_VERSION), kit_version_parts(current)
+    if mine is None or theirs is None:
+        return False
+    width = max(len(mine), len(theirs))
+    return theirs + (0,) * (width - len(theirs)) > mine + (0,) * (width - len(mine))
+
+
+def kit_version_notice(current: str | None) -> str | None:
+    """The out-of-date notice for a platform naming a newer kit, else None."""
+    if not kit_is_older(current):
+        return None
+    return (
+        f"NOTICE: this kit is {KIT_VERSION} and the current kit is {current}. "
+        "The instructions you loaded may be out of date. Tell the user how to update (below), "
+        f"then re-read this skill before relying on it.\n    update: {UPDATE_HINT}."
+    )
+
+
 def authoring_roles(repo_root: Path, context: dict[str, Any] | None, required: bool = False) -> list[str] | None:
     """Resolver roles: the live context's when it has them, else the checkout's org chart."""
     if context is not None and context.get("roles") is not None:
@@ -1718,8 +1770,17 @@ def report(
     as_json: bool,
     extra: dict[str, Any] | None = None,
     emit: Callable[[str], None] = print,
+    current_kit_version: str | None = None,
 ) -> int:
+    """Print the findings and the verdict; return the exit code.
+
+    `current_kit_version` is the live context's `kit_version`: when it names a
+    newer kit than this one, the report carries an out-of-date notice. The
+    notice never changes the exit code or the filing gate — only a rules
+    mismatch stops filing.
+    """
     state = rules_state(fingerprint)
+    notice = kit_version_notice(current_kit_version)
     if state == "mismatch":
         findings = [f for f in findings if not f["pin_dependent"]]
     else:
@@ -1736,6 +1797,9 @@ def report(
                     "built_for_rules_fingerprint": BUILT_FOR_RULES_FINGERPRINT,
                     "rules_fingerprint": fingerprint,
                     "rules_state": state,
+                    "kit_version": KIT_VERSION,
+                    "current_kit_version": current_kit_version,
+                    "kit_out_of_date": notice is not None,
                     "findings": findings,
                     **(extra or {}),
                 },
@@ -1744,6 +1808,8 @@ def report(
             )
         )
         return code
+    if notice is not None:
+        emit(notice)
     for f in findings:
         tag = f["severity"].upper() + (" (provisional)" if f.get("provisional") else "")
         emit(f"{tag} {f['rule']} at {f['path']}: {f['message']}\n    fix: {f['fix']}")

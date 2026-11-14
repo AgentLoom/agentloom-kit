@@ -3,7 +3,7 @@ name: agentloom
 description: File work for AgentLoom correctly from the IDE — resolver-ready GitHub issues, dependency-ordered issue batches, roadmap tasks in .seed-engine/roadmap.yml, and manual-blocker resolutions — checked by a deterministic validator before anything is filed or pushed. Use when the user asks to file, queue, plan or hand work to AgentLoom or Seed-Engine, to put something on the roadmap, to pin or park a roadmap task, to complete a BLK-* blocker, or to check a hand-written issue or roadmap edit before pushing.
 compatibility: Needs Python 3.10+ with PyYAML and ruamel.yaml, git, and the GitHub CLI (gh) for filing issues. Works offline with no AgentLoom credentials; the optional AgentLoom MCP server adds the live authoring context and your user id.
 metadata:
-  kit_version: "2026.11.8"
+  kit_version: "2026.11.12"
   built_for_rules_fingerprint: "b1cfb5d7a0752596ab06ba40198d8abf2a110689b4c095f9680ac3a2cef56e88"
 ---
 
@@ -41,7 +41,7 @@ below works without it.
 
 ## Staying current
 
-This is AgentLoom kit `2026.11.8`. `get_authoring_context` returns the
+This is AgentLoom kit `2026.11.12`. `get_authoring_context` returns the
 current version as `kit_version`, and the server's instructions name it. If
 yours is older, these instructions may be out of date: tell the user how to
 update (the validator prints the steps) and to run `/reload-plugins` or start
@@ -93,15 +93,17 @@ Every write:
 | The user wants | Tool |
 |---|---|
 | File without `gh` or a checkout | `open_issue`, or `open_issue_batch` for 2–10 linked issues — the platform checks, labels and stamps them; `scheduling: "parked"` files one that must not start yet (`references/labels.md`). From a checkout, pass the `baseline` that `validate.py issue` prints on `open_issue`: the platform pins the issue's `## References` at that commit |
-| File it and have the engine review it before anything starts | `open_issue_reviewed` — the same draft as `open_issue`; it files the issue parked and starts the reviewed onboarding in one call. The platform removes the park when the review converges and leaves it parked otherwise; `after_review: "pin" | "run"` makes the platform pin the issue, or start its resolver run as you, when the review converges (default `none`); a park, unpark or pin from the Backlog drops it. Follow the loop with `get_issue_status` |
-| An existing issue reviewed | `review_issue` — a sprint-published issue gets a read-only `issue_review` that comments; a plain one gets the reviewed onboarding. Its preview names the backend and refuses an issue already reviewed, parked on an operator, or with a run in flight. `after_review: "pin" | "run"` applies when a plain issue's review converges, as you (default `none`); pin needs Maintain; a sprint-published issue refuses it |
+| File it and have the engine review it before anything starts | `open_issue_reviewed` — the same draft as `open_issue`; it files the issue parked and starts its review in one call. The review may rewrite the issue's body and title in place; the original is kept in a comment (`references/issue-review.md`). The platform removes the park when the review converges and leaves it parked otherwise; `after_review: "pin" | "run"` makes the platform pin the issue, or start its resolver run as you, when the review converges (default `none`); a park, unpark or pin from the Backlog drops it. Follow the loop with `get_issue_status`, then read what it changed with `get_issue_review` |
+| An existing issue reviewed | `review_issue` — a sprint-published issue gets a read-only `issue_review` that comments; a plain one gets the writer/reviewer review, which may rewrite the body in place (`references/issue-review.md`). Its preview names the backend and refuses an issue already reviewed, parked on an operator, or with a run in flight. `after_review: "pin" | "run"` applies when a plain issue's review converges, as you (default `none`); pin needs Maintain; a sprint-published issue refuses it. It does not lift a park the issue already had |
+| What the review changed and why | `get_issue_review` — each round's verdict and findings, the writer's adopted or rejected answer to each with its reason, the stop, any title change, whether the body changed, and the link to the original body; open or closed issue. Re-read the published body before relying on it |
 | A Jira ticket pulled in ("onboard APPSEC-219") | `onboard_ticket` with the `ticket_key` — the planning scope whose project matches the key places it in a repository; the platform files and binds the issue with the user as requester and starts its preview run, which approvers see in the Inbox. Its preview names the scope, the repository and whether the ticket is already bound; a bound ticket returns its issue instead of a second one. A key no scope covers, or a scope that cannot place a repository, is refused with the reason |
 | "Run it now" | `dispatch_run` on the issue |
 | A stopped run going again | `get_run_failure`, then `steer_run` (read `references/steer-guidance.md` first) or `resume_run`; `reset_cap: true` only when the run's cap is exhausted — it is limited per day |
+| Stop a run | `cancel_run` with its `run_id` — the dashboard's Cancel; preview first: it says whether the run can be cancelled and, if not, why (a run waiting on a merge decision is ended by merging or closing its pull request). Cancel a running round before steering it |
 | Landings a human merged closed out | `close_out_landings` for the repository — one call covers every landing still waiting for its closeout, never one per issue. Its preview names the reminders that clear now and the issues one `triager` run closes out; follow the run, then read its `landing_closeout` for what was closed out and what was held, and why |
 | A roadmap change the platform commits | `revise_roadmap` — its preview is the exact diff; `git pull` after; a task already delivered or no longer wanted is settled, after you verify it (`references/roadmap-task.md`) |
 | A manual blocker recorded | `complete_blocker` (instead of `blocker-complete.py`) |
-| A resolver's or an onboarding's questions answered | `respond_to_blocker` — its preview returns the questions and the revision to answer; an onboarding's (`family: "onboard"`) are next when `get_issue_status` shows its `onboard` run waiting with questions |
+| A resolver's or a review's questions answered | `respond_to_blocker` — its preview returns the questions and the revision to answer; a review's or an onboarding's (`family: "onboard"`) are next when `get_issue_status` shows its `onboard` run waiting with questions |
 | A recommendation accepted | `get_recommendation`, then `accept_recommendation` |
 | A recommendation rejected | `get_recommendation`, then `reject_recommendation` with an optional `reason` — preview first: one whose proposal someone already acted on cannot be rejected |
 | An approval decided | `decide_approval` — preview first: approving a merge gate merges its pull request, and merge gates cannot be rejected |
@@ -196,7 +198,7 @@ See `references/blockers.md`. Find the `BLK-*` entry in
 at, do (or walk the user through) the steps, run the section's `Validate:`
 check, then:
 
-`python3 $KIT/scripts/blocker-complete.py BLK-007 --status completed --resolution "<what was done and where the values live>"`
+`python3 $KIT/scripts/blocker-complete.py BLK-007 --status completed --resolution "<what was done, any non-secret value the section asks you to record, and where secrets live>"`
 
 Review the diff, commit and push. `BLK-RES-*` blockers belong to a run: they
 are answered with `respond_to_blocker` when connected, or in the AgentLoom
@@ -247,4 +249,5 @@ the validator prints.
 - `references/labels.md` — the label scheme
 - `references/blockers.md` — manual blockers, statuses, resolutions
 - `references/steer-guidance.md` — writing guidance for `steer_run`
+- `references/issue-review.md` — how an issue review works: what it changes on GitHub, following it, the park, reading the findings with `get_issue_review`
 - `references/tech-skills.json` — the engine's tech-skill pool

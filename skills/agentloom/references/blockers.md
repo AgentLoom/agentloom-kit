@@ -67,8 +67,11 @@ what happened.
 4. Review the diff, commit and push to the default branch. The push wakes
    AgentLoom, which re-plans the gated tasks.
 
-The summary is committed to the repository forever. Say where a value lives
-(`in Secret Manager as STRIPE_WEBHOOK_SECRET`), never the value.
+The summary is committed to the repository forever. When the guide section
+asks you to record a non-secret value (a URL, an id, a parameter), put the
+value itself in the summary: the task the blocker gates commits it. A secret
+never goes in: say where it lives (`in Secret Manager as
+STRIPE_WEBHOOK_SECRET`), never the secret.
 
 To check a hand edit: `python3 $KIT/scripts/validate.py blocker BLK-007`.
 

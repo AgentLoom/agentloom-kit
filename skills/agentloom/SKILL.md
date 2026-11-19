@@ -3,7 +3,7 @@ name: agentloom
 description: File work for AgentLoom correctly from the IDE — resolver-ready GitHub issues, dependency-ordered issue batches, roadmap tasks in .seed-engine/roadmap.yml, and manual-blocker resolutions — checked by a deterministic validator before anything is filed or pushed. Use when the user asks to file, queue, plan or hand work to AgentLoom or Seed-Engine, to put something on the roadmap, to pin or park a roadmap task, to complete a BLK-* blocker, or to check a hand-written issue or roadmap edit before pushing.
 compatibility: Needs Python 3.10+ with PyYAML and ruamel.yaml, git, and the GitHub CLI (gh) for filing issues. Works offline with no AgentLoom credentials; the optional AgentLoom MCP server adds the live authoring context and your user id.
 metadata:
-  kit_version: "2026.11.12"
+  kit_version: "2026.11.17"
   built_for_rules_fingerprint: "b1cfb5d7a0752596ab06ba40198d8abf2a110689b4c095f9680ac3a2cef56e88"
 ---
 
@@ -39,9 +39,14 @@ The first tool call opens a browser sign-in; the user approves it once. If the
 server is not available, or the user declines, continue offline — every step
 below works without it.
 
+For how AgentLoom behaves — what a screen, setting, state or failure means —
+look it up instead of guessing: connected, `search_docs` finds the help center
+page to quote; offline, the same pages are listed in `https://agent-loom.com/llms.txt`, each
+with a Markdown copy to read.
+
 ## Staying current
 
-This is AgentLoom kit `2026.11.12`. `get_authoring_context` returns the
+This is AgentLoom kit `2026.11.17`. `get_authoring_context` returns the
 current version as `kit_version`, and the server's instructions name it. If
 yours is older, these instructions may be out of date: tell the user how to
 update (the validator prints the steps) and to run `/reload-plugins` or start
@@ -100,6 +105,7 @@ Every write:
 | "Run it now" | `dispatch_run` on the issue |
 | A stopped run going again | `get_run_failure`, then `steer_run` (read `references/steer-guidance.md` first) or `resume_run`; `reset_cap: true` only when the run's cap is exhausted — it is limited per day |
 | Stop a run | `cancel_run` with its `run_id` — the dashboard's Cancel; preview first: it says whether the run can be cancelled and, if not, why (a run waiting on a merge decision is ended by merging or closing its pull request). Cancel a running round before steering it |
+| A pull request handed to the engine | `hand_over_pull_request` with the repository id and the pull request number — preview first: it says whether the pull request can be handed over and which issue the work would run under, or that a tracking issue would be filed. The engine takes it through checks, review and merge on its own branch and keeps its title and description. Pass `intent` with what the change is for, and `issue_number` when the pull request closes several issues. `hand_back_pull_request` takes it back: the engine stops, its commits stay. Starting a hand-over over is done in the dashboard (Backlog → Pull requests) |
 | Landings a human merged closed out | `close_out_landings` for the repository — one call covers every landing still waiting for its closeout, never one per issue. Its preview names the reminders that clear now and the issues one `triager` run closes out; follow the run, then read its `landing_closeout` for what was closed out and what was held, and why |
 | A roadmap change the platform commits | `revise_roadmap` — its preview is the exact diff; `git pull` after; a task already delivered or no longer wanted is settled, after you verify it (`references/roadmap-task.md`) |
 | A manual blocker recorded | `complete_blocker` (instead of `blocker-complete.py`) |
@@ -107,6 +113,13 @@ Every write:
 | A recommendation accepted | `get_recommendation`, then `accept_recommendation` |
 | A recommendation rejected | `get_recommendation`, then `reject_recommendation` with an optional `reason` — preview first: one whose proposal someone already acted on cannot be rejected |
 | An approval decided | `decide_approval` — preview first: approving a merge gate merges its pull request, and merge gates cannot be rejected |
+| How AgentLoom behaves, or what a screen, setting, state or failure means | `search_docs` with the question — quote the help center page it returns, with its link, instead of guessing |
+
+When you have just opened a pull request for the user in an AgentLoom
+repository and the work is not finished, or still needs review and merge,
+offer to hand it over to the engine with `hand_over_pull_request`. Never hand
+one over unasked: it takes the pull request out of the user's hands until they
+hand it back.
 
 `list_inbox` names, per row, the tool that resolves it (`resolve_with`). A
 `proposal` row is decided only in the dashboard (Inbox → Proposals): point the

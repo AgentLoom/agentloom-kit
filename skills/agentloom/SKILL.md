@@ -3,7 +3,7 @@ name: agentloom
 description: File work for AgentLoom correctly from the IDE — resolver-ready GitHub issues, dependency-ordered issue batches, roadmap tasks in .seed-engine/roadmap.yml, and manual-blocker resolutions — checked by a deterministic validator before anything is filed or pushed. Use when the user asks to file, queue, plan or hand work to AgentLoom or Seed-Engine, to put something on the roadmap, to pin or park a roadmap task, to complete a BLK-* blocker, or to check a hand-written issue or roadmap edit before pushing.
 compatibility: Needs Python 3.10+ with PyYAML and ruamel.yaml, git, and the GitHub CLI (gh) for filing issues. Works offline with no AgentLoom credentials; the optional AgentLoom MCP server adds the live authoring context and your user id.
 metadata:
-  kit_version: "2026.11.17"
+  kit_version: "2026.11.19"
   built_for_rules_fingerprint: "b1cfb5d7a0752596ab06ba40198d8abf2a110689b4c095f9680ac3a2cef56e88"
 ---
 
@@ -46,7 +46,7 @@ with a Markdown copy to read.
 
 ## Staying current
 
-This is AgentLoom kit `2026.11.17`. `get_authoring_context` returns the
+This is AgentLoom kit `2026.11.19`. `get_authoring_context` returns the
 current version as `kit_version`, and the server's instructions name it. If
 yours is older, these instructions may be out of date: tell the user how to
 update (the validator prints the steps) and to run `/reload-plugins` or start
@@ -262,5 +262,6 @@ the validator prints.
 - `references/labels.md` — the label scheme
 - `references/blockers.md` — manual blockers, statuses, resolutions
 - `references/steer-guidance.md` — writing guidance for `steer_run`
+- `references/runs.md` — what a run's status and stages mean, in the dashboard's words
 - `references/issue-review.md` — how an issue review works: what it changes on GitHub, following it, the park, reading the findings with `get_issue_review`
 - `references/tech-skills.json` — the engine's tech-skill pool

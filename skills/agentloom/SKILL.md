@@ -3,7 +3,7 @@ name: agentloom
 description: File work for AgentLoom correctly from the IDE — resolver-ready GitHub issues, dependency-ordered issue batches, roadmap tasks in .seed-engine/roadmap.yml, and manual-blocker resolutions — checked by a deterministic validator before anything is filed or pushed. Use when the user asks to file, queue, plan or hand work to AgentLoom or Seed-Engine, to put something on the roadmap, to pin or park a roadmap task, to complete a BLK-* blocker, or to check a hand-written issue or roadmap edit before pushing.
 compatibility: Needs Python 3.10+ with PyYAML and ruamel.yaml, git, and the GitHub CLI (gh) for filing issues. Works offline with no AgentLoom credentials; the optional AgentLoom MCP server adds the live authoring context and your user id.
 metadata:
-  kit_version: "2026.11.19"
+  kit_version: "2026.11.25"
   built_for_rules_fingerprint: "b1cfb5d7a0752596ab06ba40198d8abf2a110689b4c095f9680ac3a2cef56e88"
 ---
 
@@ -46,7 +46,7 @@ with a Markdown copy to read.
 
 ## Staying current
 
-This is AgentLoom kit `2026.11.19`. `get_authoring_context` returns the
+This is AgentLoom kit `2026.11.25`. `get_authoring_context` returns the
 current version as `kit_version`, and the server's instructions name it. If
 yours is older, these instructions may be out of date: tell the user how to
 update (the validator prints the steps) and to run `/reload-plugins` or start
@@ -70,8 +70,10 @@ call acts on, checked on every call:
 
 - filing issues, runs (starting, resuming, steering, cap resets), blockers and
   approvals need Contribute on the repository;
-- changing the roadmap, promoting its version, and merging a roadmap, genesis
-  or maintenance pull request need Maintain;
+- changing the roadmap, promoting its version, merging a roadmap, genesis or
+  maintenance pull request, and approving a permission grant (a run stopped for
+  a command or network host it was never granted; approving resumes that one
+  run with the grant) need Maintain;
 - accepting a recommendation needs Admin on its repository.
 
 Someone with Propose on a repository can read it here but not act: what they
